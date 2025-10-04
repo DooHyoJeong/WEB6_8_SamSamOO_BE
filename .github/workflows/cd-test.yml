@@ -1,0 +1,59 @@
+name: cd-test
+
+on:
+  workflow_run:
+    workflows: ["docker-build"]   # ← docker-build.yml 의 name
+    types: [completed]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy-test:
+    if: ${{ github.event.workflow_run.conclusion == 'success'
+      && startsWith(github.event.workflow_run.head_branch, 'release/') }}
+    runs-on: ubuntu-latest
+    environment: test
+
+    steps:
+      - name: Derive image tag
+        id: vars
+        run: |
+          BR="${{ github.event.workflow_run.head_branch }}"
+          BR_TAG="${BR//\//-}"
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}/balaw:rc-${BR_TAG}-latest" >> $GITHUB_OUTPUT
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 예: 단일 컨테이너 교체 (짧은 순간 다운타임 감수)
+      - name: Deploy to TEST over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.TEST_HOST }}
+          username: ${{ secrets.TEST_USER }}
+          key: ${{ secrets.TEST_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            docker pull ${{ steps.vars.outputs.image }}
+            docker rm -f app || true
+            docker run -d --name app --restart=always -p 8080:8080 \
+              -e SPRING_PROFILES_ACTIVE=test \
+              ${{ steps.vars.outputs.image }}
+            # 헬스체크(필요 시 수정)
+            for i in {1..30}; do
+              if curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null; then
+                echo "TEST app is healthy"; exit 0
+              fi
+              sleep 2
+            done
+            echo "Health check failed" >&2; exit 1
+
+concurrency:
+  group: cd-test-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
