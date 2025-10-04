@@ -54,32 +54,25 @@ jobs:
             "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/artifacts" \
             | jq '.artifacts[] | {name,id,size_in_bytes,expired}'
       # 1) 이름으로 먼저 받기 (실패해도 계속 진행)
-      - name: Download backend jar (by name)
-        id: dl_named
-        continue-on-error: true
+      - name: Download backend jar (pattern)
+        id: dl
         uses: actions/download-artifact@v4
         with:
-          name: backend-jar
-          path: backend/dist
+          pattern: backend-jar          # 정확 이름이면 동일하게 매칭됨
+          merge-multiple: false
+          path: backend/_dl             # 임시 저장 루트
           repository: ${{ github.repository }}
           run-id: ${{ github.event.workflow_run.id }}
       
-      # 2) 실패/취소/스킵이면 전체 받기 (always()가 포인트)
-      - name: Fallback – download ALL artifacts
-        if: ${{ always() && steps.dl_named.outcome != 'success' }}
-        uses: actions/download-artifact@v4
-        with:
-          path: backend/_all
-          repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}
-      
-      # 3) JAR 찾아서 표준 위치로 복사 (역시 always()와 outcome 체크)
+      # 표준 경로로 정규화
       - name: Normalize jar path
-        if: ${{ always() && steps.dl_named.outcome != 'success' }}
         run: |
           set -euo pipefail
-          JAR=$(find backend/_all -type f -name "app.jar" -o -name "*.jar" | grep -v plain | head -n1 || true)
-          test -n "$JAR" || { echo "No jar found in artifacts"; ls -R backend/_all; exit 1; }
+          DL="${{ steps.dl.outputs.download-path }}"
+          echo "download-path=$DL"
+          # app.jar 우선, 없으면 plain 제외한 *.jar
+          JAR=$(find "$DL" -type f -name "app.jar" -o -name "*.jar" | grep -v plain | head -n1 || true)
+          test -n "$JAR" || { echo "No jar found in $DL"; ls -R "$DL"; exit 1; }
           mkdir -p backend/dist
           cp "$JAR" backend/dist/app.jar
           ls -al backend/dist
