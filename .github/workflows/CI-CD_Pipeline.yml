@@ -284,15 +284,19 @@ jobs:
 
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+            install -d -m 700 /home/ec2-user/configs
+            cat > /home/ec2-user/configs/prod.env.b64 <<'__B64__'
+            ${{ secrets.PROD_ENV_BASE64 }}
+            __B64__
             # 릴리즈 태그는 rc-<branch>-latest 사용
             BR_TAG="$(echo "${GITHUB_REF_NAME}" | sed 's|/|-|g')"
             IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.DOCKER_IMAGE_NAME }}:rc-${BR_TAG}-latest"
 
             docker pull "$IMAGE"
             docker rm -f app || true
-            docker run -d --name app --restart=always \
+            docker run --env-file /home/ec2-user/configs/prod.env \
+              -d --name app --restart=always \
               --network common -p 8080:8080 \
-              -e SPRING_PROFILES_ACTIVE=test \
               "$IMAGE"
 
             for i in {1..30}; do
