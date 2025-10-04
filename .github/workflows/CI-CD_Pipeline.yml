@@ -153,14 +153,18 @@ jobs:
 
       - name: Set lowercase repo + tags
         run: |
-          echo "IMAGE_PREFIX=$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-          BR="${GITHUB_REF_NAME}"
-          BR_TAG="${BR//\//-}"
+          set -euo pipefail
+          REPO="$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"   # owner/repo
+          BR="${GITHUB_REF_NAME}"                                            # e.g. main or release/1.0.0
+          BR_TAG="${BR//\//-}"                                               # release-1.0.0
+          echo "IMAGE_PREFIX=$REPO" >> $GITHUB_ENV
+          
           if [ "$BR" = "main" ]; then
-            echo "IMG_TAGS=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/balaw:${GITHUB_SHA},${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/balaw:latest" >> $GITHUB_ENV
+            TAGS="${REGISTRY}/${REPO}/balaw:${GITHUB_SHA},${REGISTRY}/${REPO}/balaw:latest"
           else
-            echo "IMG_TAGS=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/balaw:rc-${BR_TAG}-${GITHUB_SHA},${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/balaw:rc-${BR_TAG}-latest" >> $GITHUB_ENV
+            TAGS="${REGISTRY}/${REPO}/balaw:rc-${BR_TAG}-${GITHUB_SHA},${REGISTRY}/${REPO}/balaw:rc-${BR_TAG}-latest"
           fi
+          echo "IMG_TAGS=$TAGS" >> $GITHUB_ENV
 
       - name: Download backend jar
         uses: actions/download-artifact@v4
