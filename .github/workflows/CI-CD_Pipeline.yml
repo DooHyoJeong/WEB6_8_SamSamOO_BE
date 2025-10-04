@@ -281,6 +281,7 @@ jobs:
           working-directory: /
           comment: Replace deploy
           command: |
+            /bin/bash -lc '
             set -euo pipefail
 
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
