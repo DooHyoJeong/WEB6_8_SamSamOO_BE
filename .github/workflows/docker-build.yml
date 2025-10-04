@@ -53,26 +53,31 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/artifacts" \
             | jq '.artifacts[] | {name,id,size_in_bytes,expired}'
-      - name: Download backend jar (from CI artifacts)
+      # 1) 이름으로 먼저 받기 (실패해도 계속 진행)
+      - name: Download backend jar (by name)
+        id: dl_named
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: backend-jar
           path: backend/dist
           repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}  # ← 트리거한 CI 실행의 아티팩트 지정
-      - name: Fallback – download ALL artifacts of that run
-        if: steps.dl_named.outcome != 'success'
+          run-id: ${{ github.event.workflow_run.id }}
+      
+      # 2) 실패/취소/스킵이면 전체 받기 (always()가 포인트)
+      - name: Fallback – download ALL artifacts
+        if: ${{ always() && steps.dl_named.outcome != 'success' }}
         uses: actions/download-artifact@v4
         with:
           path: backend/_all
           repository: ${{ github.repository }}
           run-id: ${{ github.event.workflow_run.id }}
       
+      # 3) JAR 찾아서 표준 위치로 복사 (역시 always()와 outcome 체크)
       - name: Normalize jar path
-        if: steps.dl_named.outcome != 'success'
+        if: ${{ always() && steps.dl_named.outcome != 'success' }}
         run: |
           set -euo pipefail
-          # app.jar 우선, 없으면 plain 제외한 *.jar 중 첫 번째
           JAR=$(find backend/_all -type f -name "app.jar" -o -name "*.jar" | grep -v plain | head -n1 || true)
           test -n "$JAR" || { echo "No jar found in artifacts"; ls -R backend/_all; exit 1; }
           mkdir -p backend/dist
