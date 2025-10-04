@@ -53,27 +53,52 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/artifacts" \
             | jq '.artifacts[] | {name,id,size_in_bytes,expired}'
-      # 1) 이름으로 먼저 받기 (실패해도 계속 진행)
+            # 1) 패턴으로 먼저 받기
       - name: Download backend jar (pattern)
         id: dl
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          pattern: backend-jar          # 정확 이름이면 동일하게 매칭됨
+          pattern: backend-jar
           merge-multiple: false
-          path: backend/_dl             # 임시 저장 루트
+          path: backend/_dl
           repository: ${{ github.repository }}
           run-id: ${{ github.event.workflow_run.id }}
       
-      # 표준 경로로 정규화
-      - name: Normalize jar path
+      # 2) 패턴 다운로드 성공 시에만 정규화
+      - name: Normalize jar path (from pattern)
+        if: ${{ steps.dl.outcome == 'success' }}
         run: |
           set -euo pipefail
           DL="${{ steps.dl.outputs.download-path }}"
           echo "download-path=$DL"
+          test -d "$DL" || { echo "Download path not found: $DL"; exit 1; }
           # app.jar 우선, 없으면 plain 제외한 *.jar
-          JAR=$(find "$DL" -type f -name "app.jar" -o -name "*.jar" | grep -v plain | head -n1 || true)
+          JAR=$(find "$DL" -type f \( -name "app.jar" -o -name "*.jar" \) | grep -v plain | head -n1 || true)
           test -n "$JAR" || { echo "No jar found in $DL"; ls -R "$DL"; exit 1; }
           mkdir -p backend/dist
+          cp "$JAR" backend/dist/app.jar
+          ls -al backend/dist
+      
+      # 3) 실패하면 → API로 직접 zip 내려받아 풀기 (확정 해결)
+      - name: Fallback – download via API
+        if: ${{ steps.dl.outcome != 'success' }}
+        run: |
+          set -euo pipefail
+          # 해당 run의 artifact id를 API로 조회
+          ARTIFACT_ID=$(curl -sS -H "Authorization: Bearer ${{ github.token }}" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/artifacts" \
+            | jq -r '.artifacts[] | select(.name=="backend-jar") | .id')
+          test -n "$ARTIFACT_ID" || { echo "backend-jar not found in artifact list"; exit 1; }
+      
+          mkdir -p backend/_api backend/dist
+          curl -L -H "Authorization: Bearer ${{ github.token }}" \
+            -o backend/_api/backend-jar.zip \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
+      
+          unzip -o backend/_api/backend-jar.zip -d backend/_api/unzipped >/dev/null
+          JAR=$(find backend/_api/unzipped -type f \( -name "app.jar" -o -name "*.jar" \) | grep -v plain | head -n1 || true)
+          test -n "$JAR" || { echo "No jar inside artifact zip"; ls -R backend/_api/unzipped; exit 1; }
           cp "$JAR" backend/dist/app.jar
           ls -al backend/dist
           
