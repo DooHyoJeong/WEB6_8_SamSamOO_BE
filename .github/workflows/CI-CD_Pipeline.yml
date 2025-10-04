@@ -281,8 +281,13 @@ jobs:
           working-directory: /
           comment: Replace deploy
           command: |
-            /bin/bash -lc 'cat << "BASH" >/tmp/deploy.sh
             set -euo pipefail
+            echo "===== 현재 실행 중인 컨테이너 ====="
+            docker ps -a || true
+            
+            echo "===== 기존 컨테이너 종료 & 제거 ====="
+            docker stop app 2>/dev/null || true
+            docker rm app 2>/dev/null || true
             
             # EC2 내부에서 prod.env 복원 (ENV_BASE64 -> 디코드)
             install -d -m 700 /home/ec2-user/configs
@@ -290,33 +295,28 @@ jobs:
             ${{ secrets.PROD_ENV_BASE64 }}
             __B64__
             
-            BR_TAG="${{ env.BR_TAG }}" /bin/bash -lc 'cat << "BASH" >/tmp/deploy.sh
-
-            # GHCR 비대화형 로그인 (비밀값 로그 노출 방지)
-            TOKEN="${{ secrets.GHCR_PAT }}"
-            if [ -n "$TOKEN" ]; then
-            printf "%s" "$TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR:-${{ github.actor }}}" --password-stdin
-            else
-            echo "GHCR_PAT is empty" >&2; exit 1
-            fi
-          
-            # 예시: 이미지 풀 & 실행
-            IMAGE="ghcr.io/${{ env.IMAGE_PREFIX }}/balaw:rc-$(echo "${GITHUB_REF_NAME}" | sed "s|/|-|g")-latest"
-            docker pull "$IMAGE"
-            docker rm -f app || true
+            base64 -d /home/ec2-user/configs/prod.env.b64 > /home/ec2-user/configs/prod.env
+            chmod 600 /home/ec2-user/configs/prod.env
+            shred -u /home/ec2-user/configs/prod.env.b64   # 임시 파일 안전 삭제
+            
+            
+            # EC2에서 GHCR 로그인
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # 최신 이미지 pull & 컨테이너 실행
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.DOCKER_IMAGE_NAME }}:latest
+            
+            echo "===== 새로운 컨테이너 실행 ====="
             docker run --env-file /home/ec2-user/configs/prod.env \
-            -d --name app --restart=always \
-            --network common -p 8080:8080 \
-            "$IMAGE"
-          
-            for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null; then
-            echo "RC app healthy"; exit 0
-            fi
-            sleep 2
-            done
-            echo "Health check failed" >&2; exit 1
-            BASH
-            chmod +x /tmp/deploy.sh
-            exec /bin/bash /tmp/deploy.sh
-            '
+            -e SPRING_PROFILES_ACTIVE=prod \
+            -d --name app \
+            --network common \
+            -p 8080:8080 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.DOCKER_IMAGE_NAME }}:latest
+            echo "===== 새 컨테이너 로그 출력 ====="
+            sleep 5
+            docker logs --tail=100 app || true
+
+            echo "===== 배포 완료 ====="
+            # dangling image 정리
+            docker rmi $(docker images -f "dangling=true" -q) || true
