@@ -270,6 +270,8 @@ jobs:
     steps:
       - name: Set lowercase repo name
         run: echo "IMAGE_PREFIX=$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+      - name: Derive RC tag
+        run: echo "BR_TAG=$(echo '${{ github.ref_name }}' | sed 's|/|-|g')" >> $GITHUB_ENV
 
       - name: AWS SSM Send-Command (simple replace)
         uses: peterkimzz/aws-ssm-send-command@master
@@ -304,7 +306,8 @@ jobs:
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             # 최신 이미지 pull & 컨테이너 실행
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.DOCKER_IMAGE_NAME }}:latest
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.DOCKER_IMAGE_NAME }}:rc-${{ env.BR_TAG }}-latest
+
             
             echo "===== 새로운 컨테이너 실행 ====="
             docker run --env-file /home/ec2-user/configs/prod.env \
