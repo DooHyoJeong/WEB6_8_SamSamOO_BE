@@ -101,7 +101,7 @@ jobs:
   build-artifacts:
     needs: tests
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'   # ✅ main 브랜치일 때만 실행
+    if: startsWith(github.ref, 'refs/heads/main') || startsWith(github.ref, 'refs/heads/release/')
 
     steps:
       - uses: actions/checkout@v4
