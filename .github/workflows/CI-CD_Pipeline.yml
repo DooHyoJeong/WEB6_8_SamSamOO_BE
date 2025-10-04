@@ -281,21 +281,26 @@ jobs:
           working-directory: /
           comment: Replace deploy
           command: |
-            /bin/bash -lc 'cat <<'BASH' >/tmp/deploy.sh
+            /bin/bash -lc 'cat << "BASH" >/tmp/deploy.sh
             set -euo pipefail
-      
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      
-            BR_TAG="$(echo "${GITHUB_REF_NAME}" | sed "s|/|-|g")"
-            IMAGE="ghcr.io/${{ env.IMAGE_PREFIX }}/balaw:rc-${BR_TAG}-latest"
-      
+          
+            # GHCR 비대화형 로그인 (비밀값 로그 노출 방지)
+            TOKEN="${{ secrets.GHCR_PAT }}"
+            if [ -n "$TOKEN" ]; then
+            printf "%s" "$TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR:-${{ github.actor }}}" --password-stdin
+            else
+            echo "GHCR_PAT is empty" >&2; exit 1
+            fi
+          
+            # 예시: 이미지 풀 & 실행
+            IMAGE="ghcr.io/${{ env.IMAGE_PREFIX }}/balaw:rc-$(echo "${GITHUB_REF_NAME}" | sed "s|/|-|g")-latest"
             docker pull "$IMAGE"
             docker rm -f app || true
             docker run -d --name app --restart=always \
             --network common -p 8080:8080 \
             -e SPRING_PROFILES_ACTIVE=test \
             "$IMAGE"
-      
+          
             for i in {1..30}; do
             if curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null; then
             echo "RC app healthy"; exit 0
