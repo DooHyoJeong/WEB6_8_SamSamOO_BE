@@ -60,7 +60,25 @@ jobs:
           path: backend/dist
           repository: ${{ github.repository }}
           run-id: ${{ github.event.workflow_run.id }}  # ← 트리거한 CI 실행의 아티팩트 지정
-
+      - name: Fallback – download ALL artifacts of that run
+        if: steps.dl_named.outcome != 'success'
+        uses: actions/download-artifact@v4
+        with:
+          path: backend/_all
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+      
+      - name: Normalize jar path
+        if: steps.dl_named.outcome != 'success'
+        run: |
+          set -euo pipefail
+          # app.jar 우선, 없으면 plain 제외한 *.jar 중 첫 번째
+          JAR=$(find backend/_all -type f -name "app.jar" -o -name "*.jar" | grep -v plain | head -n1 || true)
+          test -n "$JAR" || { echo "No jar found in artifacts"; ls -R backend/_all; exit 1; }
+          mkdir -p backend/dist
+          cp "$JAR" backend/dist/app.jar
+          ls -al backend/dist
+          
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
