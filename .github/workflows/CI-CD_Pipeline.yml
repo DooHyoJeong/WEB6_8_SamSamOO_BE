@@ -278,6 +278,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           instance-ids: "i-034c52777b2b88e07"
+          working-directory: /
           comment: Replace deploy
           command: |
             set -euo pipefail
@@ -288,6 +289,11 @@ jobs:
             cat > /home/ec2-user/configs/prod.env.b64 <<'__B64__'
             ${{ secrets.PROD_ENV_BASE64 }}
             __B64__
+            
+            base64 -d /home/ec2-user/configs/prod.env.b64 > /home/ec2-user/configs/prod.env
+            chmod 600 /home/ec2-user/configs/prod.env
+            shred -u /home/ec2-user/configs/prod.env.b64
+            
             # 릴리즈 태그는 rc-<branch>-latest 사용
             BR_TAG="$(echo "${GITHUB_REF_NAME}" | sed 's|/|-|g')"
             IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.DOCKER_IMAGE_NAME }}:rc-${BR_TAG}-latest"
