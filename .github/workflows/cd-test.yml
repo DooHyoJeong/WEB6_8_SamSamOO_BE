@@ -31,21 +31,41 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 예: 단일 컨테이너 교체 (짧은 순간 다운타임 감수)
-      - name: Deploy to TEST over SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Deploy via SSM
+        uses: peterkimzz/aws-ssm-send-command@master
+        id: ssm
         with:
-          host: ${{ secrets.TEST_HOST }}
-          username: ${{ secrets.TEST_USER }}
-          key: ${{ secrets.TEST_SSH_KEY }}
-          script: |
+          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          instance-ids: "i-034c52777b2b88e07"
+          working-directory: /
+          comment: Deploy
+          command: |
             set -euo pipefail
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+            install -d -m 700 /home/ec2-user/configs
+            cat > /home/ec2-user/configs/test.env.b64 <<'__B64__'
+            ${{ secrets.PROD_ENV_BASE64 }}
+            __B64__
+            if grep -q '[^[:space:]]' /home/ec2-user/configs/test.env.b64; then
+              base64 -d /home/ec2-user/configs/test.env.b64 > /home/ec2-user/configs/test.env
+              chmod 600 /home/ec2-user/configs/test.env
+              shred -u /home/ec2-user/configs/test.env.b64
+              USE_ENV_FILE="--env-file /home/ec2-user/configs/test.env"
+            else
+              rm -f /home/ec2-user/configs/test.env.b64
+              USE_ENV_FILE=""
+            fi
+
             docker pull ${{ steps.vars.outputs.image }}
             docker rm -f app || true
             docker run -d --name app --restart=always -p 8080:8080 \
               -e SPRING_PROFILES_ACTIVE=test \
+              $USE_ENV_FILE \
               ${{ steps.vars.outputs.image }}
-            # 헬스체크(필요 시 수정)
+
             for i in {1..30}; do
               if curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null; then
                 echo "TEST app is healthy"; exit 0
