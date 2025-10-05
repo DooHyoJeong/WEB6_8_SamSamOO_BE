@@ -153,12 +153,15 @@ jobs:
 
       - name: Set lowercase repo + Compute tags by branch
         run: |
+          set -euo pipefail
           echo "IMAGE_PREFIX=$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
           if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
-            echo "IMG_TAGS=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/balaw:${{ github.sha }},${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/balaw:latest" >> $GITHUB_ENV
+            # main: latest + sha
+            echo "IMG_TAGS=${{ env.REGISTRY }}/${REPO}/balaw:${GITHUB_SHA},${{ env.REGISTRY }}/${REPO}/balaw:latest" >> "$GITHUB_ENV"
           else
-            BR_TAG="$(echo "${GITHUB_REF_NAME}" | sed 's|/|-|g')"   # release-x.y.z -> release-x.y.z
-            echo "IMG_TAGS=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/balaw:rc-${BR_TAG}-${{ github.sha }},${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/balaw:rc-${BR_TAG}-latest" >> $GITHUB_ENV
+          # release/*: rc-브랜치-sha + rc-브랜치-latest
+          BR_TAG="$(echo "${GITHUB_REF_NAME}" | sed 's|/|-|g')"
+          echo "IMG_TAGS=${{ env.REGISTRY }}/${REPO}/balaw:rc-${BR_TAG}-${GITHUB_SHA},${{ env.REGISTRY }}/${REPO}/balaw:rc-${BR_TAG}-latest" >> "$GITHUB_ENV"
           fi
 
       - name: Download backend jar
