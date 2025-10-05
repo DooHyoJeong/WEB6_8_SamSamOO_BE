@@ -153,18 +153,7 @@ jobs:
 
       - name: Set lowercase repo + tags
         run: |
-          set -euo pipefail
-          REPO="$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"   # owner/repo
-          BR="${GITHUB_REF_NAME}"                                            # e.g. main or release/1.0.0
-          BR_TAG="${BR//\//-}"                                               # release-1.0.0
-          echo "IMAGE_PREFIX=$REPO" >> $GITHUB_ENV
-          
-          if [ "$BR" = "main" ]; then
-            TAGS="${REGISTRY}/${REPO}/balaw:${GITHUB_SHA},${REGISTRY}/${REPO}/balaw:latest"
-          else
-            TAGS="${REGISTRY}/${REPO}/balaw:rc-${BR_TAG}-${GITHUB_SHA},${REGISTRY}/${REPO}/balaw:rc-${BR_TAG}-latest"
-          fi
-          echo "IMG_TAGS=$TAGS" >> $GITHUB_ENV
+          echo "IMAGE_PREFIX=$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Download backend jar
         uses: actions/download-artifact@v4
@@ -186,7 +175,9 @@ jobs:
           context: backend
           file: backend/Dockerfile
           push: true
-          tags: ${{ env.IMG_TAGS }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/balaw:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/balaw:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
   deploy-prod:
@@ -306,7 +297,7 @@ jobs:
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             # 최신 이미지 pull & 컨테이너 실행
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.DOCKER_IMAGE_NAME }}:rc-${{ env.BR_TAG }}-${GITHUB_SHA}
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.DOCKER_IMAGE_NAME }}:latest
 
             
             echo "===== 새로운 컨테이너 실행 ====="
@@ -315,7 +306,7 @@ jobs:
             -d --name app \
             --network common \
             -p 8080:8080 \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.DOCKER_IMAGE_NAME }}:rc-${{ env.BR_TAG }}-${GITHUB_SHA}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.DOCKER_IMAGE_NAME }}:latest
             echo "===== 새 컨테이너 로그 출력 ====="
             sleep 5
             docker logs --tail=100 app || true
