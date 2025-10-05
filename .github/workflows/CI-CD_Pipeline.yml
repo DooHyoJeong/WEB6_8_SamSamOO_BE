@@ -210,7 +210,7 @@ jobs:
           instance-ids: "i-0d16224582a1f6146"
           comment: Blue-Green deploy
           command: |
-            set -Eeuo pipefail
+            set -euo pipefail
   
             trap "echo \"[ROLLBACK] error occurred, keeping current route.\" " ERR
             
@@ -311,42 +311,46 @@ jobs:
           working-directory: /
           comment: Replace deploy
           command: |
-            set -euo pipefail
-            echo "===== 현재 실행 중인 컨테이너 ====="
-            docker ps -a || true
-            
-            echo "===== 기존 컨테이너 종료 & 제거 ====="
-            docker stop app 2>/dev/null || true
-            docker rm app 2>/dev/null || true
-            
-            # EC2 내부에서 prod.env 복원 (ENV_BASE64 -> 디코드)
-            install -d -m 700 /home/ec2-user/configs
-            cat > /home/ec2-user/configs/prod.env.b64 <<'__B64__'
-            ${{ secrets.PROD_ENV_BASE64 }}
-            __B64__
-            
-            base64 -d /home/ec2-user/configs/prod.env.b64 > /home/ec2-user/configs/prod.env
-            chmod 600 /home/ec2-user/configs/prod.env
-            shred -u /home/ec2-user/configs/prod.env.b64   # 임시 파일 안전 삭제
-            
-            
-            # EC2에서 GHCR 로그인
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # 최신 이미지 pull & 컨테이너 실행
-            docker pull ${{ env.REGISTRY }}/${IMAGE_PREFIX}/balaw:rc-${{ env.BR_TAG }}-${{ github.sha }}            
-            
-            echo "===== 새로운 컨테이너 실행 ====="
-            docker run --env-file /home/ec2-user/configs/prod.env \
-            -e SPRING_PROFILES_ACTIVE=prod \
-            -d --name app \
-            --network common \
-            -p 8080:8080 \
-            ${{ env.REGISTRY }}/${IMAGE_PREFIX}/balaw:rc-${{ env.BR_TAG }}-${{ github.sha }} 
-            echo "===== 새 컨테이너 로그 출력 ====="
-            sleep 5
-            docker logs --tail=100 app || true
+            bash -lc '
+              set -euo pipefail
 
-            echo "===== 배포 완료 ====="
-            # dangling image 정리
-            docker rmi $(docker images -f "dangling=true" -q) || true
+              echo "===== 현재 실행 중인 컨테이너 ====="
+              docker ps -a || true
+
+              echo "===== 기존 컨테이너 종료 & 제거 ====="
+              docker stop app 2>/dev/null || true
+              docker rm app 2>/dev/null || true
+
+              # prod.env 복원
+              install -d -m 700 /home/ec2-user/configs
+              cat > /home/ec2-user/configs/prod.env.b64 <<'"'"'__B64__'"'"'
+              ${{ secrets.PROD_ENV_BASE64 }}
+              __B64__
+              base64 -d /home/ec2-user/configs/prod.env.b64 > /home/ec2-user/configs/prod.env
+              chmod 600 /home/ec2-user/configs/prod.env
+              shred -u /home/ec2-user/configs/prod.env.b64
+
+              # GHCR 로그인
+              echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+              # 사용할 이미지(브랜치/커밋 고정)
+              IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ env.DOCKER_IMAGE_NAME }}:rc-${{ env.BR_TAG }}-${{ github.sha }}"
+
+              echo "Pulling $IMAGE"
+              docker pull "$IMAGE"
+
+              echo "===== 새로운 컨테이너 실행 ====="
+              docker run --env-file /home/ec2-user/configs/prod.env \
+                -e SPRING_PROFILES_ACTIVE=prod \
+                -d --name app \
+                --network common \
+                -p 8080:8080 \
+                "$IMAGE"
+
+              echo "===== 새 컨테이너 로그 출력 ====="
+              sleep 5
+              docker logs --tail=100 app || true
+
+              echo "===== 배포 완료 ====="
+              docker rmi $(docker images -f "dangling=true" -q) || true
+            '
