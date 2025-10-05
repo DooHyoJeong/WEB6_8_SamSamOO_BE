@@ -323,12 +323,9 @@ jobs:
 
               # prod.env 복원
               install -d -m 700 /home/ec2-user/configs
-              cat > /home/ec2-user/configs/prod.env.b64 <<'"'"'__B64__'"'"'
-              ${{ secrets.PROD_ENV_BASE64 }}
-              __B64__
-              base64 -d /home/ec2-user/configs/prod.env.b64 > /home/ec2-user/configs/prod.env
+              printf "%s" "${{ secrets.PROD_ENV_BASE64 }}" | base64 -d > /home/ec2-user/configs/prod.env
               chmod 600 /home/ec2-user/configs/prod.env
-              shred -u /home/ec2-user/configs/prod.env.b64
+              test -s /home/ec2-user/configs/prod.env || { echo "prod.env empty"; exit 1; }
 
               # GHCR 로그인
               echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
