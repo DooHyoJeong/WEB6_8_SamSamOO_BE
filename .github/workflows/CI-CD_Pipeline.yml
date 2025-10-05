@@ -275,7 +275,7 @@ jobs:
             exit 1
             }
 
-          # 이전 컨테이너 종료(그레이스)
+            # 이전 컨테이너 종료(그레이스)
             echo "[INFO] Switching complete → now serving on ${NEXT_PORT}"
             sleep 5
             docker rm -f "$OLD_NAME" >/dev/null 2>&1 || true
