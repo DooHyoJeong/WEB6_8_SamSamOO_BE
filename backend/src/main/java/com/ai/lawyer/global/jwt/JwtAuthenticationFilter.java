@@ -80,6 +80,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        // OAuth2 관련 경로는 JWT 필터 스킵
+        if (request != null && shouldSkipFilter(request)) {
+            if (filterChain != null) {
+                filterChain.doFilter(request, response);
+            }
+            return;
+        }
+
         if (request != null && response != null) {
             try {
                 processAuthentication(request, response);
@@ -92,6 +100,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (filterChain != null) {
             filterChain.doFilter(request, response);
         }
+    }
+
+    /**
+     * JWT 필터를 스킵해야 하는 경로인지 확인합니다.
+     */
+    private boolean shouldSkipFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/oauth2/")
+            || path.startsWith("/login/oauth2/")
+            || path.startsWith("/api/auth/oauth2/");
     }
 
     /**

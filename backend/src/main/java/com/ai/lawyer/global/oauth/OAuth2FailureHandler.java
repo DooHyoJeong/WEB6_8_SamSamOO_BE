@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
-    @Value("${custom.oauth2.failure-url:http://localhost:8080/api/auth/oauth2/callback/failure}")
+    @Value("${custom.oauth2.failure-url}")
     private String failureUrl;
 
     @Override
@@ -29,12 +29,13 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
         String errorMessage = exception.getMessage() != null ? exception.getMessage() : "알 수 없는 오류";
         String encodedError = URLEncoder.encode(errorMessage, StandardCharsets.UTF_8);
 
+        // 프론트엔드 실패 페이지로 리다이렉트
         String targetUrl = UriComponentsBuilder.fromUriString(failureUrl)
                 .queryParam("error", encodedError)
-                .build(true)  // true로 설정하여 이미 인코딩된 값을 사용
+                .build(true)
                 .toUriString();
+        log.info("OAuth2 로그인 실패, 프론트엔드 실패 페이지로 리다이렉트: {}", targetUrl);
 
-        log.info("OAuth2 로그인 실패, 백엔드 콜백으로 리다이렉트: {}", targetUrl);
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 }

@@ -175,6 +175,22 @@ public class MemberService {
         return MemberResponse.from(member);
     }
 
+    public String getLoginIdByMemberId(Long memberId) {
+        // Member 또는 OAuth2Member 조회
+        com.ai.lawyer.domain.member.entity.MemberAdapter member = memberRepository.findById(memberId).orElse(null);
+
+        if (member == null && oauth2MemberRepository != null) {
+            member = oauth2MemberRepository.findById(memberId).orElse(null);
+        }
+
+        if (member == null) {
+            log.warn("회원을 찾을 수 없습니다: memberId={}", memberId);
+            return null;
+        }
+
+        return member.getLoginId();
+    }
+
     public void sendCodeToEmailByLoginId(String loginId) {
         Member member = memberRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new IllegalArgumentException(ERR_MEMBER_NOT_FOUND_BY_LOGIN_ID));

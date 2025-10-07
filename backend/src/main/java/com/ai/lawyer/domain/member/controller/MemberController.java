@@ -1,8 +1,8 @@
 package com.ai.lawyer.domain.member.controller;
 
-import com.ai.lawyer.domain.auth.dto.OAuth2LoginResponse;
 import com.ai.lawyer.domain.member.dto.*;
 import com.ai.lawyer.domain.member.service.MemberService;
+import com.ai.lawyer.global.oauth.PrincipalDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -64,51 +64,19 @@ public class MemberController {
     }
 
     @GetMapping("/oauth2/kakao")
-    @Operation(summary = "11. 카카오 로그인", description = "카카오 OAuth2 로그인을 시작합니다.")
+    @Operation(summary = "11. 카카오 로그인", description = "카카오 OAuth2 로그인을 시작합니다. 프론트엔드 페이지로 리다이렉트됩니다.")
     public void kakaoLogin(HttpServletResponse response) throws Exception {
         log.info("카카오 로그인 요청");
         response.sendRedirect("/oauth2/authorization/kakao");
     }
 
     @GetMapping("/oauth2/naver")
-    @Operation(summary = "12. 네이버 로그인", description = "네이버 OAuth2 로그인을 시작합니다.")
+    @Operation(summary = "12. 네이버 로그인", description = "네이버 OAuth2 로그인을 시작합니다. 프론트엔드 페이지로 리다이렉트됩니다.")
     public void naverLogin(HttpServletResponse response) throws Exception {
         log.info("네이버 로그인 요청");
         response.sendRedirect("/oauth2/authorization/naver");
     }
 
-    @GetMapping("/oauth2/callback/success")
-    @Operation(summary = "14. OAuth2 로그인 성공 콜백", description = "OAuth2 로그인 성공 시 호출되는 콜백 엔드포인트입니다.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "로그인 성공"),
-    })
-    public ResponseEntity<OAuth2LoginResponse> oauth2LoginSuccess() {
-        log.info("OAuth2 로그인 성공 콜백");
-
-        OAuth2LoginResponse response = OAuth2LoginResponse.builder()
-                .success(true)
-                .message("소셜 로그인에 성공했습니다.")
-                .build();
-
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/oauth2/callback/failure")
-    @Operation(summary = "15. OAuth2 로그인 실패 콜백", description = "OAuth2 로그인 실패 시 호출되는 콜백 엔드포인트입니다.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "401", description = "로그인 실패"),
-    })
-    public ResponseEntity<OAuth2LoginResponse> oauth2LoginFailure(
-            @RequestParam(required = false) String error) {
-        log.error("OAuth2 로그인 실패: {}", error);
-
-        OAuth2LoginResponse response = OAuth2LoginResponse.builder()
-                .success(false)
-                .message("소셜 로그인에 실패했습니다: " + (error != null ? error : "알 수 없는 오류"))
-                .build();
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-    }
 
     @PostMapping("/oauth2/test")
     @Operation(summary = "13. OAuth2 로그인 테스트 (개발용)", description = "OAuth2 플로우 없이 소셜 로그인 결과를 시뮬레이션합니다.")
@@ -121,16 +89,42 @@ public class MemberController {
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "09. 로그아웃", description = "현재 로그인된 사용자를 로그아웃합니다.")
+    @Operation(summary = "09. 로그아웃", description = "현재 로그인된 사용자를 로그아웃합니다. 로컬 로그인과 소셜 로그인 모두 지원합니다.")
     public ResponseEntity<Void> logout(Authentication authentication, HttpServletResponse response) {
-        if (authentication != null && authentication.getDetails() != null) {
-            String loginId = (String) authentication.getDetails();
-            memberService.logout(loginId, response);
-            log.info("로그아웃 완료: {}", loginId);
-        } else {
-            memberService.logout("", response);
-            log.info("인증 정보 없이 로그아웃 완료");
+        String loginId = null;
+
+        if (authentication != null && authentication.getPrincipal() != null) {
+            Object principal = authentication.getPrincipal();
+
+            // JWT 토큰 기반 인증 (로컬 로그인 & 소셜 로그인 모두)
+            if (principal instanceof Long memberId) {
+                // memberId로 조회
+                loginId = memberService.getLoginIdByMemberId(memberId);
+                log.info("memberId로 로그아웃: memberId={}, loginId={}", memberId, loginId);
+            }
+            // PrincipalDetails (OAuth2 또는 로컬 로그인)
+            else if (principal instanceof PrincipalDetails principalDetails) {
+                com.ai.lawyer.domain.member.entity.MemberAdapter member = principalDetails.getMember();
+                loginId = member.getLoginId();
+                log.info("PrincipalDetails로 로그아웃: loginId={}, type={}",
+                    loginId, member.getClass().getSimpleName());
+            }
+            // authentication.getDetails() 사용 (기존 방식)
+            else if (authentication.getDetails() instanceof String) {
+                loginId = (String) authentication.getDetails();
+                log.info("Details로 로그아웃: loginId={}", loginId);
+            }
         }
+
+        // 로그아웃 처리 (Redis에서 토큰 삭제 + 쿠키 삭제)
+        memberService.logout(loginId != null ? loginId : "", response);
+
+        if (loginId != null) {
+            log.info("로그아웃 완료: loginId={}", loginId);
+        } else {
+            log.info("인증 정보 없이 로그아웃 완료 (쿠키만 삭제)");
+        }
+
         return ResponseEntity.ok().build();
     }
 

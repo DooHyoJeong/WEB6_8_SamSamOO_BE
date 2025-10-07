@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 
@@ -22,7 +21,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private final TokenProvider tokenProvider;
     private final CookieUtil cookieUtil;
 
-    @Value("${custom.oauth2.redirect-url:http://localhost:8080/api/auth/oauth2/callback/success}")
+    @Value("${custom.oauth2.redirect-url}")
     private String redirectUrl;
 
     @Override
@@ -41,12 +40,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         // 쿠키에 토큰 설정
         cookieUtil.setTokenCookies(response, accessToken, refreshToken);
 
-        // 백엔드 콜백 엔드포인트로 리다이렉트
-        String targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
-                .build()
-                .toUriString();
+        log.info("JWT 토큰 생성 완료 및 쿠키 설정 완료");
 
-        log.info("OAuth2 로그인 완료, 백엔드 콜백으로 리다이렉트: {}", targetUrl);
-        getRedirectStrategy().sendRedirect(request, response, targetUrl);
+        // 프론트엔드 성공 페이지로 리다이렉트
+        log.info("OAuth2 로그인 완료, 프론트엔드 성공 페이지로 리다이렉트: {}", redirectUrl);
+
+        getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
 }
