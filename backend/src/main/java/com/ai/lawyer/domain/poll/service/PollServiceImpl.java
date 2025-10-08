@@ -125,19 +125,38 @@ public class PollServiceImpl implements PollService {
         if (!(member.getRole().name().equals("USER") || member.getRole().name().equals("ADMIN"))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "투표 권한이 없습니다.");
         }
-        // 중복 투표 방지
-        /*
-        if (pollVoteRepository.existsByPoll_PollIdAndMember_MemberId(pollId, memberId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 이 투표에 참여하셨습니다.");
+        // 기존 투표 내역 조회
+        var existingVoteOpt = pollVoteRepository.findByMember_MemberIdAndPoll_PollId(memberId, pollId);
+        if (existingVoteOpt.isPresent()) {
+            PollVote existingVote = existingVoteOpt.get();
+            if (existingVote.getPollOptions().getPollItemsId().equals(pollItemsId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 투표하셨습니다.");
+            } else {
+                pollVoteRepository.deleteByMember_MemberIdAndPoll_PollId(memberId, pollId);
+                PollVote pollVote = PollVote.builder()
+                        .poll(poll)
+                        .pollOptions(pollOptions)
+                        .member(member)
+                        .build();
+                PollVote savedVote = pollVoteRepository.save(pollVote);
+                Long voteCount = pollVoteRepository.countByPollOptionId(pollItemsId);
+                return PollVoteDto.builder()
+                        .pollVoteId(savedVote.getPollVoteId())
+                        .pollId(pollId)
+                        .pollItemsId(pollItemsId)
+                        .memberId(memberId)
+                        .voteCount(voteCount)
+                        .message("투표 항목을 변경하였습니다.")
+                        .build();
+            }
         }
-        */
+        // 기존 투표 내역이 없으면 정상 투표
         PollVote pollVote = PollVote.builder()
                 .poll(poll)
                 .pollOptions(pollOptions)
                 .member(member)
                 .build();
         PollVote savedVote = pollVoteRepository.save(pollVote);
-        // 해당 옵션의 투표 수 계산
         Long voteCount = pollVoteRepository.countByPollOptionId(pollItemsId);
         return PollVoteDto.builder()
                 .pollVoteId(savedVote.getPollVoteId())
@@ -145,6 +164,7 @@ public class PollServiceImpl implements PollService {
                 .pollItemsId(pollItemsId)
                 .memberId(memberId)
                 .voteCount(voteCount)
+                .message("투표가 완료되었습니다.")
                 .build();
     }
 
@@ -569,3 +589,4 @@ public class PollServiceImpl implements PollService {
         validatePollCommon(dto.getVoteTitle(), dto.getPollOptions(), dto.getReservedCloseAt());
     }
 }
+
