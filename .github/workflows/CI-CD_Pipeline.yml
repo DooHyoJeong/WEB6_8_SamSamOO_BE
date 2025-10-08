@@ -22,7 +22,6 @@ jobs:
           - os: ubuntu-latest
             gradle_cmd: "./gradlew"
             report_path: "backend/build/reports/tests"
-            domain_tasks: "testUser testExchange testTrade_log testWallet testCoin"
 
     runs-on: ${{ matrix.os }}
     env:
@@ -90,8 +89,9 @@ jobs:
           # JPA 설정 (application-test.yml에서 참조)
           TEST_JPA_HIBERNATE_DDL_AUTO=create-drop
           
-          send_email_password=${{ secrets.SEND_EMAIL_PASSWORD }}
           send_email_address=${{ secrets.SEND_EMAIL_ADDRESS }}
+          send_email_password=${{ secrets.SEND_EMAIL_PASSWORD }}
+          
 
           # Redis 설정 (application-test.yml에서 참조, GitHub Actions 서비스 사용)
           TEST_REDIS_HOST=localhost
@@ -109,6 +109,13 @@ jobs:
           CUSTOM_JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
           CUSTOM_JWT_ACCESS_TOKEN_EXPIRATION_SECONDS=3600
           EOF
+      - name: Export .env into runner env
+        working-directory: backend
+        run: |
+          while IFS= read -r line; do
+            [[ -z "$line" || "$line" =~ ^# ]] && continue
+            echo "$line" >> $GITHUB_ENV
+          done < .env
 
       - name: Run unit, and domain tests
         run: ${{ matrix.gradle_cmd }} clean test
