@@ -80,11 +80,35 @@ jobs:
       - name: Create test .env file
         working-directory: backend
         run: |
-          set -euo pipefail
-          install -d -m 700 .
-          echo "${{ secrets.DEV_ENV_BASE64 }}" | base64 -d > .env
-          chmod 600 .env
-          test -s .env || { echo ".env is empty"; exit 1; }
+          cat > .env << 'EOF'
+          # Datasource 설정 (application-test.yml에서 참조)
+          TEST_DATASOURCE_URL=jdbc:h2:mem:db_test;MODE=MySQL
+          TEST_DATASOURCE_USERNAME=sa
+          TEST_DATASOURCE_PASSWORD=
+          TEST_DATASOURCE_DRIVER=org.h2.Driver
+
+          # JPA 설정 (application-test.yml에서 참조)
+          TEST_JPA_HIBERNATE_DDL_AUTO=create-drop
+          
+          send_email_password=${{ secrets.EMAIL_PASSWORD }}
+          send_email_address=${{ secrets.SEND_EMAIL_ADDRESS }}
+
+          # Redis 설정 (application-test.yml에서 참조, GitHub Actions 서비스 사용)
+          TEST_REDIS_HOST=localhost
+          TEST_REDIS_PORT=6379
+          TEST_REDIS_PASSWORD=
+          
+          # Qdrant
+          TEST_QDRANT_HOST=localhost
+          TEST_QDRANT_PORT=6333
+          
+          # CI/CD 환경에서는 Embedded Redis 끄기
+          SPRING_DATA_REDIS_EMBEDDED=false
+
+          # JWT 설정 (application-test.yml에서 참조)
+          CUSTOM_JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+          CUSTOM_JWT_ACCESS_TOKEN_EXPIRATION_SECONDS=3600
+          EOF
 
       - name: Run unit, and domain tests
         run: ${{ matrix.gradle_cmd }} clean test
