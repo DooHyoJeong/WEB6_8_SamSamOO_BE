@@ -109,6 +109,13 @@ jobs:
           CUSTOM_JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
           CUSTOM_JWT_ACCESS_TOKEN_EXPIRATION_SECONDS=3600
           EOF
+      - name: Export .env into runner env
+        working-directory: backend
+        run: |
+          while IFS= read -r line; do
+            [[ -z "$line" || "$line" =~ ^# ]] && continue
+            echo "$line" >> $GITHUB_ENV
+          done < .env
 
       - name: Run unit, and domain tests
         run: ${{ matrix.gradle_cmd }} clean test
