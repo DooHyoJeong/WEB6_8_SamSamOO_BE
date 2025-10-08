@@ -148,7 +148,7 @@ public class PostController {
      }
 
     @Operation(summary = "게시글+투표 동시 등록")
-    @PostMapping("/createpost")
+    @PostMapping("/createPost")
     public ResponseEntity<ApiResponse<PostDetailDto>> createPostWithPoll(@RequestBody PostWithPollCreateDto dto) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principal = authentication.getPrincipal();
