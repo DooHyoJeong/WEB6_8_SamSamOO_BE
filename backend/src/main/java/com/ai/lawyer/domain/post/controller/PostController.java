@@ -1,7 +1,9 @@
 package com.ai.lawyer.domain.post.controller;
 
+import com.ai.lawyer.domain.poll.dto.PollDto;
 import com.ai.lawyer.domain.post.dto.*;
 import com.ai.lawyer.domain.post.service.PostService;
+import com.ai.lawyer.domain.poll.dto.PollDto;
 import com.ai.lawyer.domain.member.repositories.MemberRepository;
 import com.ai.lawyer.global.jwt.TokenProvider;
 import com.ai.lawyer.global.response.ApiResponse;
@@ -47,11 +49,11 @@ public class PostController {
         return ResponseEntity.ok(new ApiResponse<>(201, "게시글이 등록되었습니다.", created));
     }
 
-    @PostMapping("/postdev")
-    public ResponseEntity<ApiResponse<PostDto>> createPostDev(@RequestBody PostRequestDto postRequestDto, @RequestParam Long memberId) {
-        PostDto created = postService.createPost(postRequestDto, memberId);
-        return ResponseEntity.ok(new ApiResponse<>(201, "[DEV] 게시글이 등록되었습니다.", created));
-    }
+//    @PostMapping("/postdev")
+//    public ResponseEntity<ApiResponse<PostDto>> createPostDev(@RequestBody PostRequestDto postRequestDto, @RequestParam Long memberId) {
+//        PostDto created = postService.createPost(postRequestDto, memberId);
+//        return ResponseEntity.ok(new ApiResponse<>(201, "[DEV] 게시글이 등록되었습니다.", created));
+//    }
 
     @Operation(summary = "게시글 전체 조회")
     @GetMapping("")
@@ -207,5 +209,35 @@ public class PostController {
         }
         PostPageDto response = new PostPageDto(posts);
         return ResponseEntity.ok(new ApiResponse<>(200, "마감된 투표 게시글 페이징 조회 성공", response));
+    }
+
+    @Operation(summary = "진행중인 투표 Top N 조회")
+    @GetMapping("/top/ongoingList")
+    public ResponseEntity<ApiResponse<List<PostDto>>> getTopNOngoingPolls(@RequestParam(defaultValue = "3") int size) {
+        List<PostDto> posts = postService.getTopNPollsByStatus(PollDto.PollStatus.ONGOING, size);
+        String message = String.format("진행중인 투표 Top %d 조회 성공", size);
+        return ResponseEntity.ok(new ApiResponse<>(200, message, posts));
+    }
+
+    @Operation(summary = "마감된 투표 Top N 조회")
+    @GetMapping("/top/closedList")
+    public ResponseEntity<ApiResponse<List<PostDto>>> getTopNClosedPolls(@RequestParam(defaultValue = "3") int size) {
+        List<PostDto> posts = postService.getTopNPollsByStatus(PollDto.PollStatus.CLOSED, size);
+        String message = String.format("종료된 투표 Top %d 조회 성공", size);
+        return ResponseEntity.ok(new ApiResponse<>(200, message, posts));
+    }
+
+    @Operation(summary = "진행중인 투표 Top 1 조회")
+    @GetMapping("/top/ongoing")
+    public ResponseEntity<ApiResponse<PostDto>> getTopOngoingPoll() {
+        PostDto post = postService.getTopPollByStatus(PollDto.PollStatus.ONGOING);
+        return ResponseEntity.ok(new ApiResponse<>(200, "진행중인 투표 Top 1 조회 성공", post));
+    }
+
+    @Operation(summary = "마감된 투표 Top 1 조회")
+    @GetMapping("/top/closed")
+    public ResponseEntity<ApiResponse<PostDto>> getTopClosedPoll() {
+        PostDto post = postService.getTopPollByStatus(PollDto.PollStatus.CLOSED);
+        return ResponseEntity.ok(new ApiResponse<>(200, "마감된 투표 Top 1 조회 성공", post));
     }
 }

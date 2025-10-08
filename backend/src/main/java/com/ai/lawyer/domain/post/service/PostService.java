@@ -7,6 +7,7 @@ import com.ai.lawyer.domain.post.dto.PostRequestDto;
 import com.ai.lawyer.domain.post.dto.PostUpdateDto;
 import com.ai.lawyer.domain.post.dto.PostWithPollCreateDto;
 import com.ai.lawyer.domain.post.dto.PostSimpleDto;
+import com.ai.lawyer.domain.poll.dto.PollDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -35,4 +36,8 @@ public interface PostService {
     Page<PostDto> getPostsPaged(Pageable pageable);
     Page<PostDto> getOngoingPostsPaged(Pageable pageable);
     Page<PostDto> getClosedPostsPaged(Pageable pageable);
+
+    // ===== 투표 Top 관련 =====
+    List<PostDto> getTopNPollsByStatus(PollDto.PollStatus status, int n);
+    PostDto getTopPollByStatus(PollDto.PollStatus status);
 }

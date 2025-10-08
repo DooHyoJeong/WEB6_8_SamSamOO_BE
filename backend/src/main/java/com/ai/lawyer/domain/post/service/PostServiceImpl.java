@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,7 +42,12 @@ public class PostServiceImpl implements PostService {
     private final PollVoteRepository pollVoteRepository;
     private final PollService pollService;
 
-    public PostServiceImpl(PostRepository postRepository, MemberRepository memberRepository, PollRepository pollRepository, PollOptionsRepository pollOptionsRepository, PollVoteRepository pollVoteRepository, PollService pollService) {
+    public PostServiceImpl(PostRepository postRepository,
+                           MemberRepository memberRepository,
+                           PollRepository pollRepository,
+                           PollOptionsRepository pollOptionsRepository,
+                           PollVoteRepository pollVoteRepository,
+                           PollService pollService) {
         this.postRepository = postRepository;
         this.memberRepository = memberRepository;
         this.pollRepository = pollRepository;
@@ -271,6 +277,25 @@ public class PostServiceImpl implements PostService {
             .filter(dto -> dto.getPoll() != null && dto.getPoll().getStatus() == PollDto.PollStatus.CLOSED)
             .collect(Collectors.toList());
         return new PageImpl<>(closed, pageable, closed.size());
+    }
+
+    @Override
+    public List<PostDto> getTopNPollsByStatus(PollDto.PollStatus status, int n) {
+        return postRepository.findAll().stream()
+            .map(this::convertToDto)
+            .filter(dto -> dto.getPoll() != null && dto.getPoll().getStatus() == status)
+            .sorted(Comparator.comparing((PostDto dto) -> dto.getPoll().getTotalVoteCount() == null ? 0 : dto.getPoll().getTotalVoteCount()).reversed())
+            .limit(n)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public PostDto getTopPollByStatus(PollDto.PollStatus status) {
+        return postRepository.findAll().stream()
+            .map(this::convertToDto)
+            .filter(dto -> dto.getPoll() != null && dto.getPoll().getStatus() == status)
+            .max(Comparator.comparing((PostDto dto) -> dto.getPoll().getTotalVoteCount() == null ? 0 : dto.getPoll().getTotalVoteCount()))
+            .orElse(null);
     }
 
     private PostDto convertToDto(Post entity) {
