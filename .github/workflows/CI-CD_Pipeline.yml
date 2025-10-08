@@ -83,7 +83,7 @@ jobs:
           # Datasource 설정 (application-test.yml에서 참조)
           TEST_DATASOURCE_URL=jdbc:h2:mem:db_test;MODE=MySQL
           TEST_DATASOURCE_USERNAME=sa
-          TEST_DATASOURCE_PASSWORD=""
+          TEST_DATASOURCE_PASSWORD=
           TEST_DATASOURCE_DRIVER=org.h2.Driver
 
           # JPA 설정 (application-test.yml에서 참조)
@@ -96,7 +96,7 @@ jobs:
           # Redis 설정 (application-test.yml에서 참조, GitHub Actions 서비스 사용)
           TEST_REDIS_HOST=localhost
           TEST_REDIS_PORT=6379
-          TEST_REDIS_PASSWORD=""
+          TEST_REDIS_PASSWORD=
           
           # Qdrant
           TEST_QDRANT_HOST=localhost
