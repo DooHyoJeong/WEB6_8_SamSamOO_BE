@@ -82,9 +82,9 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
 
-                // 세션 정책: OAuth2 콜백을 위해 필요 시 생성
+                // 세션 정책: JWT 기반 인증이므로 세션 사용 안 함 (STATELESS)
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 // H2 콘솔을 위한 frameOptions 설정
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
