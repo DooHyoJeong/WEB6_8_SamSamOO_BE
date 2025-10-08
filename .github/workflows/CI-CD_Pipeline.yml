@@ -22,7 +22,6 @@ jobs:
           - os: ubuntu-latest
             gradle_cmd: "./gradlew"
             report_path: "backend/build/reports/tests"
-            domain_tasks: "testUser testExchange testTrade_log testWallet testCoin"
 
     runs-on: ${{ matrix.os }}
     env:
@@ -82,8 +81,7 @@ jobs:
         run: |
           cat > .env << 'EOF'
           # Datasource 설정 (application-test.yml에서 참조)
-          SPRING_PROFILES_ACTIVE=test
-          TEST_DATASOURCE_URL=jdbc:h2:mem:db_test;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+          TEST_DATASOURCE_URL=jdbc:h2:mem:db_test;MODE=MySQL
           TEST_DATASOURCE_USERNAME=sa
           TEST_DATASOURCE_PASSWORD=
           TEST_DATASOURCE_DRIVER=org.h2.Driver
@@ -91,8 +89,9 @@ jobs:
           # JPA 설정 (application-test.yml에서 참조)
           TEST_JPA_HIBERNATE_DDL_AUTO=create-drop
           
-          send_email_password=${{ secrets.SEND_EMAIL_PASSWORD }}
           send_email_address=${{ secrets.SEND_EMAIL_ADDRESS }}
+          send_email_password=${{ secrets.SEND_EMAIL_PASSWORD }}
+          
 
           # Redis 설정 (application-test.yml에서 참조, GitHub Actions 서비스 사용)
           TEST_REDIS_HOST=localhost
