@@ -53,8 +53,9 @@ class OAuth2SuccessHandlerTest {
     @BeforeEach
     void setUp() {
         // Redirect URL 설정 (환경변수에서 주입되는 값)
-        ReflectionTestUtils.setField(oauth2SuccessHandler, "redirectUrl",
+        ReflectionTestUtils.setField(oauth2SuccessHandler, "frontendRedirectUrl",
             "http://localhost:3000/oauth/success");
+        ReflectionTestUtils.setField(oauth2SuccessHandler, "activeProfile", "dev");
 
         // 카카오 회원 생성
         kakaoMember = OAuth2Member.builder()
