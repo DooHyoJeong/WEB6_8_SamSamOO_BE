@@ -2,9 +2,7 @@ package com.ai.lawyer.domain.poll.service;
 
 import com.ai.lawyer.domain.poll.dto.PollCreateDto;
 import com.ai.lawyer.domain.poll.dto.PollDto;
-import com.ai.lawyer.domain.poll.dto.PollUpdateDto;
-import com.ai.lawyer.domain.poll.dto.PollVoteDto;
-import com.ai.lawyer.domain.poll.dto.PollStaticsResponseDto;
+import com.ai.lawyer.domain.poll.dto.PollOptionCreateDto;
 import com.ai.lawyer.domain.poll.entity.Poll;
 import com.ai.lawyer.domain.post.entity.Post;
 import com.ai.lawyer.domain.post.repository.PostRepository;
@@ -16,10 +14,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
+import java.time.LocalDateTime;
 
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
@@ -56,20 +54,20 @@ class PollAutoCloseTest {
         post.setPostName("테스트용 게시글");
         post.setPostContent("테스트 내용");
         post.setCategory("테스트");
-        post.setCreatedAt(java.time.LocalDateTime.now());
+        post.setCreatedAt(LocalDateTime.now());
         post.setMember(member);
         post = postRepository.save(post);
 
         PollCreateDto createDto = new PollCreateDto();
         createDto.setPostId(post.getPostId());
         createDto.setVoteTitle("autoClose 테스트");
-        createDto.setReservedCloseAt(java.time.LocalDateTime.now().plusHours(1).plusSeconds(1));
+        createDto.setReservedCloseAt(LocalDateTime.now().plusHours(1).plusSeconds(1));
         // 투표 항목 2개 추가
-        var option1 = new com.ai.lawyer.domain.poll.dto.PollOptionCreateDto();
+        PollOptionCreateDto option1 = new PollOptionCreateDto();
         option1.setContent("찬성");
-        var option2 = new com.ai.lawyer.domain.poll.dto.PollOptionCreateDto();
+        PollOptionCreateDto option2 = new PollOptionCreateDto();
         option2.setContent("반대");
-        createDto.setPollOptions(java.util.Arrays.asList(option1, option2));
+        createDto.setPollOptions(asList(option1, option2));
         PollDto created = pollService.createPoll(createDto, member.getMemberId());
 
         // 2. 생성 직후 상태는 ONGOING이어야 함
@@ -77,10 +75,8 @@ class PollAutoCloseTest {
         assertThat(ongoing.getStatus()).isEqualTo(PollDto.PollStatus.ONGOING);
 
         // 3. reservedCloseAt을 DB에서 과거로 강제 변경
-        var poll = pollRepository.findById(created.getPollId()).get();
-        var reservedCloseAtField = poll.getClass().getDeclaredField("reservedCloseAt");
-        reservedCloseAtField.setAccessible(true);
-        reservedCloseAtField.set(poll, java.time.LocalDateTime.now().minusSeconds(1));
+        Poll poll = pollRepository.findById(created.getPollId()).get();
+        poll.setReservedCloseAt(LocalDateTime.now().minusSeconds(1));
         pollRepository.save(poll);
 
         // 4. getPoll 호출 시 자동 종료(CLOSED)로 바뀌는지 확인
