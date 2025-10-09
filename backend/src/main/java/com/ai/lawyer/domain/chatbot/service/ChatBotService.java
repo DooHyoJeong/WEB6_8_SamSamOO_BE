@@ -1,5 +1,7 @@
 package com.ai.lawyer.domain.chatbot.service;
 
+import com.ai.lawyer.domain.chatbot.dto.ChatDto.ChatLawDto;
+import com.ai.lawyer.domain.chatbot.dto.ChatDto.ChatPrecedentDto;
 import com.ai.lawyer.domain.chatbot.dto.ChatDto.ChatRequest;
 import com.ai.lawyer.domain.chatbot.dto.ChatDto.ChatResponse;
 import com.ai.lawyer.domain.chatbot.dto.ExtractionDto.KeywordExtractionDto;
@@ -93,12 +95,25 @@ public class ChatBotService {
     }
 
     private ChatResponse ChatResponse(History history, String fullResponse, List<Document> cases, List<Document> laws) {
+
+        ChatPrecedentDto precedentDto = null;
+        if (cases != null && !cases.isEmpty()) {
+            Document firstCase = cases.get(0);
+            precedentDto = ChatPrecedentDto.from(firstCase);
+        }
+
+        ChatLawDto lawDto = null;
+        if (laws != null && !laws.isEmpty()) {
+            Document firstLaw = laws.get(0);
+            lawDto = ChatLawDto.from(firstLaw);
+        }
+
         return ChatResponse.builder()
                 .roomId(history.getHistoryId())
                 .title(history.getTitle())
                 .message(fullResponse)
-                .similarCases(cases)
-                .similarLaws(laws)
+                .precedent(precedentDto)
+                .law(lawDto)
                 .build();
     }
 
