@@ -207,13 +207,20 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          instance-ids: "i-0d16224582a1f6146"
+          instance-ids: "i-07c4adc403a77e70f"
           working-directory: /
           comment: Blue-Green deploy
           command: |
             bash -lc '
               set -euo pipefail
               trap '\''echo "[ROLLBACK] error occurred, keeping current route."'\''
+            
+              # 8080을 점유한 레거시 컨테이너가 있으면 제거 (블루-그린과 충돌 방지)
+              LEGACY=$(docker ps --format '\''{{.Names}}\t{{.Ports}}'\'' | awk '\''/0\.0\.0\.0:8080->8080/ {print $1}'\'')
+              if [ -n "$LEGACY" ] && [ "$LEGACY" != "app-18080" ] && [ "$LEGACY" != "app-18081" ]; then
+                echo "[INFO] removing legacy container bound to :8080 ($LEGACY)"
+                docker rm -f "$LEGACY" || true
+              fi
             
               # 공통 경로/파일 (OS 상관없이 $HOME 사용)
               STATE_DIR="$HOME/configs"
@@ -314,7 +321,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          instance-ids: "i-0d16224582a1f6146"
+          instance-ids: "i-07c4adc403a77e70f"
           working-directory: /
           comment: Replace deploy
           command: |
