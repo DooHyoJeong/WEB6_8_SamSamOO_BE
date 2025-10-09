@@ -319,6 +319,7 @@ jobs:
             docker run -d --name "${GREEN}" \
               --restart unless-stopped \
               --network "${NET}" \
+              --env-file /home/ec2-user/configs/prod.env \
               -e TZ=Asia/Seoul \
               "${IMAGE}"
             
