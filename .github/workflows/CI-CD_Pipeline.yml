@@ -208,10 +208,11 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           instance-ids: "i-0d16224582a1f6146"
+          working-directory: /
           comment: Blue-Green deploy
           command: |
             bash -lc '
-              set -Eeuo pipefail
+              set -euo pipefail
               trap '\''echo "[ROLLBACK] error occurred, keeping current route."'\''
             
               # 공통 경로/파일 (OS 상관없이 $HOME 사용)
