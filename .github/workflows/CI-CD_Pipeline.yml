@@ -207,7 +207,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          instance-ids: "i-0d16224582a1f6146"
+          instance-ids: "i-07c4adc403a77e70f"
           working-directory: /
           comment: Blue-Green deploy
           command: |
@@ -314,7 +314,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          instance-ids: "i-0d16224582a1f6146"
+          instance-ids: "i-07c4adc403a77e70f"
           working-directory: /
           comment: Replace deploy
           command: |
