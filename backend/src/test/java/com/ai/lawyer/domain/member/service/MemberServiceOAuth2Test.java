@@ -67,6 +67,15 @@ class MemberServiceOAuth2Test {
     private com.ai.lawyer.domain.chatbot.repository.HistoryRepository historyRepository;
 
     @Mock
+    private com.ai.lawyer.domain.chatbot.repository.ChatRepository chatRepository;
+
+    @Mock
+    private com.ai.lawyer.domain.chatbot.repository.ChatPrecedentRepository chatPrecedentRepository;
+
+    @Mock
+    private com.ai.lawyer.domain.chatbot.repository.ChatLawRepository chatLawRepository;
+
+    @Mock
     private HttpServletResponse response;
 
     private MemberService memberService;
@@ -86,7 +95,10 @@ class MemberServiceOAuth2Test {
                 emailAuthService,
                 postRepository,
                 pollVoteRepository,
-                historyRepository
+                historyRepository,
+                chatRepository,
+                chatPrecedentRepository,
+                chatLawRepository
         );
         memberService.setOauth2MemberRepository(oauth2MemberRepository);
 

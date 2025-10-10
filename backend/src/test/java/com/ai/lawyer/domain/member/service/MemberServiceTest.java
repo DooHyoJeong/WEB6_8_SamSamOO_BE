@@ -62,6 +62,15 @@ class MemberServiceTest {
     private com.ai.lawyer.domain.chatbot.repository.HistoryRepository historyRepository;
 
     @Mock
+    private com.ai.lawyer.domain.chatbot.repository.ChatRepository chatRepository;
+
+    @Mock
+    private com.ai.lawyer.domain.chatbot.repository.ChatPrecedentRepository chatPrecedentRepository;
+
+    @Mock
+    private com.ai.lawyer.domain.chatbot.repository.ChatLawRepository chatLawRepository;
+
+    @Mock
     private HttpServletResponse response;
 
     private MemberService memberService;
@@ -85,7 +94,10 @@ class MemberServiceTest {
                 emailAuthService,
                 postRepository,
                 pollVoteRepository,
-                historyRepository
+                historyRepository,
+                chatRepository,
+                chatPrecedentRepository,
+                chatLawRepository
         );
         memberService.setOauth2MemberRepository(oauth2MemberRepository);
 
@@ -315,7 +327,10 @@ class MemberServiceTest {
         // 1. 회원 조회
         verify(memberRepository).findByLoginId(loginId);
 
-        // 2. 연관 데이터 명시적 삭제 (순서 중요)
+        // 2. 연관 데이터 명시적 삭제 (순서 중요: FK 제약조건 고려)
+        verify(chatPrecedentRepository).deleteByMemberIdValue(member.getMemberId());
+        verify(chatLawRepository).deleteByMemberIdValue(member.getMemberId());
+        verify(chatRepository).deleteByMemberIdValue(member.getMemberId());
         verify(historyRepository).deleteByMemberIdValue(member.getMemberId());
         verify(pollVoteRepository).deleteByMemberIdValue(member.getMemberId());
         verify(postRepository).deleteByMemberIdValue(member.getMemberId());
