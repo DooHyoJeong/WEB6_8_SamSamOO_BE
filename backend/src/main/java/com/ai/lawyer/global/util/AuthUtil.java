@@ -29,4 +29,15 @@ public class AuthUtil {
         return null;
     }
 
+    public static String getCurrentMemberRole() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        return authentication.getAuthorities().stream()
+            .findFirst()
+            .map(auth -> auth.getAuthority())
+            .orElse(null);
+    }
+
 }

@@ -60,8 +60,8 @@ class PostServiceTest {
     @DisplayName("게시글 상세 조회")
     void t4() {
         PostDetailDto expected = new PostDetailDto();
-        Mockito.when(postService.getPostDetailById(Mockito.anyLong())).thenReturn(expected);
-        PostDetailDto result = postService.getPostDetailById(1L);
+        Mockito.when(postService.getPostDetailById(Mockito.anyLong(), Mockito.anyLong())).thenReturn(expected);
+        PostDetailDto result = postService.getPostDetailById(1L, 1L);
         assertThat(result).isEqualTo(expected);
     }
 
@@ -96,8 +96,8 @@ class PostServiceTest {
     @DisplayName("전체 게시글 목록 조회")
     void t8() {
         java.util.List expected = java.util.Collections.emptyList();
-        Mockito.when(postService.getAllPosts()).thenReturn(expected);
-        java.util.List result = postService.getAllPosts();
+        Mockito.when(postService.getAllPosts(Mockito.anyLong())).thenReturn(expected);
+        java.util.List result = postService.getAllPosts(1L);
         assertThat(result).isEqualTo(expected);
     }
 

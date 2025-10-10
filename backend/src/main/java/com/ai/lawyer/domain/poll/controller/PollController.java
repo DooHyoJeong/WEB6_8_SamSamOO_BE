@@ -1,9 +1,6 @@
 package com.ai.lawyer.domain.poll.controller;
 
-import com.ai.lawyer.domain.poll.dto.PollCreateDto;
-import com.ai.lawyer.domain.poll.dto.PollDto;
-import com.ai.lawyer.domain.poll.dto.PollStaticsResponseDto;
-import com.ai.lawyer.domain.poll.dto.PollVoteDto;
+import com.ai.lawyer.domain.poll.dto.*;
 import com.ai.lawyer.domain.poll.entity.PollVote;
 import com.ai.lawyer.domain.poll.entity.PollOptions;
 import com.ai.lawyer.domain.poll.service.PollService;
@@ -73,9 +70,26 @@ public class PollController {
         return ResponseEntity.ok(new ApiResponse<>(200, "투표가 종료되었습니다.", null));
     }
 
+    @Operation(summary = "투표 수정")
+    @PutMapping("/{pollId}")
+    public ResponseEntity<ApiResponse<PollDto>> updatePoll(@PathVariable Long pollId, @RequestBody PollUpdateDto pollUpdateDto) {
+        Long currentMemberId = AuthUtil.getCurrentMemberId();
+        PollDto poll = pollService.getPoll(pollId, currentMemberId);
+        if (!poll.getPostId().equals(currentMemberId)) {
+            return ResponseEntity.status(403).body(new ApiResponse<>(403, "본인만 투표를 수정할 수 있습니다.", null));
+        }
+        PollDto updated = pollService.updatePoll(pollId, pollUpdateDto);
+        return ResponseEntity.ok(new ApiResponse<>(200, "투표가 수정되었습니다.", updated));
+    }
+
     @Operation(summary = "투표 삭제")
     @DeleteMapping("/{pollId}")
     public ResponseEntity<ApiResponse<Void>> deletePoll(@PathVariable Long pollId) {
+        Long currentMemberId = AuthUtil.getCurrentMemberId();
+        PollDto poll = pollService.getPoll(pollId, currentMemberId);
+        if (!poll.getPostId().equals(currentMemberId)) {
+            return ResponseEntity.status(403).body(new ApiResponse<>(403, "본인만 투표를 삭제할 수 있습니다.", null));
+        }
         pollService.deletePoll(pollId);
         return ResponseEntity.ok(new ApiResponse<>(200, "투표가 삭제되었습니다.", null));
     }
@@ -117,13 +131,6 @@ public class PollController {
         Long memberId = Long.parseLong(authentication.getName());
         PollDto created = pollService.createPoll(pollCreateDto, memberId);
         return ResponseEntity.ok(new ApiResponse<>(201, "투표가 생성되었습니다.", created));
-    }
-
-    @Operation(summary = "투표 수정")
-    @PutMapping("/{pollId}")
-    public ResponseEntity<ApiResponse<PollDto>> updatePoll(@PathVariable Long pollId, @RequestBody com.ai.lawyer.domain.poll.dto.PollUpdateDto pollUpdateDto) {
-        PollDto updated = pollService.updatePoll(pollId, pollUpdateDto);
-        return ResponseEntity.ok(new ApiResponse<>(200, "투표가 수정되었습니다.", updated));
     }
 
     @Operation(summary = "진행중인 투표 전체 목록 조회")

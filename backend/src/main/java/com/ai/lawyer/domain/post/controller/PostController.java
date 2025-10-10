@@ -74,7 +74,8 @@ public class PostController {
     @Operation(summary = "게시글 단일 조회")
     @GetMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostDetailDto>> getPostById(@PathVariable Long postId) {
-        PostDetailDto postDto = postService.getPostDetailById(postId);
+        Long memberId = AuthUtil.getCurrentMemberId();
+        PostDetailDto postDto = postService.getPostDetailById(postId, memberId);
         return ResponseEntity.ok(new ApiResponse<>(200, "게시글 단일 조회 성공", postDto));
     }
 
@@ -82,7 +83,7 @@ public class PostController {
     @GetMapping("/member/{memberId}")
     public ResponseEntity<ApiResponse<List<PostDetailDto>>> getPostsByMember(@PathVariable Long memberId) {
         List<PostDetailDto> posts = postService.getPostsByMemberId(memberId).stream()
-            .map(postDto -> postService.getPostDetailById(postDto.getPostId()))
+            .map(postDto -> postService.getPostDetailById(postDto.getPostId(), AuthUtil.getCurrentMemberId()))
             .toList();
         return ResponseEntity.ok(new ApiResponse<>(200, "회원별 게시글 목록 조회 성공", posts));
     }
@@ -90,22 +91,43 @@ public class PostController {
     @Operation(summary = "게시글 수정")
     @PutMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostDetailDto>> updatePost(@PathVariable Long postId, @RequestBody PostUpdateDto postUpdateDto) {
+        Long currentMemberId = AuthUtil.getCurrentMemberId();
+        String currentRole = AuthUtil.getCurrentMemberRole();
+        PostDetailDto postDetail = postService.getPostDetailById(postId, currentMemberId);
+        Long postOwnerId = postDetail.getPost().getMemberId();
+        if (!postOwnerId.equals(currentMemberId) && !"ADMIN".equals(currentRole)) {
+            return ResponseEntity.status(403).body(new ApiResponse<>(403, "본인 또는 관리자만 수정 가능합니다.", null));
+        }
         postService.updatePost(postId, postUpdateDto);
-        PostDetailDto updated = postService.getPostDetailById(postId);
+        PostDetailDto updated = postService.getPostDetailById(postId, currentMemberId);
         return ResponseEntity.ok(new ApiResponse<>(200, "게시글이 수정되었습니다.", updated));
     }
 
     @Operation(summary = "게시글 부분 수정(PATCH)")
     @PatchMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostDetailDto>> patchUpdatePost(@PathVariable Long postId, @RequestBody PostUpdateDto postUpdateDto) {
+        Long currentMemberId = AuthUtil.getCurrentMemberId();
+        String currentRole = AuthUtil.getCurrentMemberRole();
+        PostDetailDto postDetail = postService.getPostDetailById(postId, currentMemberId);
+        Long postOwnerId = postDetail.getPost().getMemberId();
+        if (!postOwnerId.equals(currentMemberId) && !"ADMIN".equals(currentRole)) {
+            return ResponseEntity.status(403).body(new ApiResponse<>(403, "본인 또는 관리자만 수정 가능합니다.", null));
+        }
         postService.patchUpdatePost(postId, postUpdateDto);
-        PostDetailDto updated = postService.getPostDetailById(postId);
+        PostDetailDto updated = postService.getPostDetailById(postId, currentMemberId);
         return ResponseEntity.ok(new ApiResponse<>(200, "게시글이 수정되었습니다.", updated));
     }
 
     @Operation(summary = "게시글 삭제")
     @DeleteMapping("/{postId}")
     public ResponseEntity<ApiResponse<Void>> deletePost(@PathVariable Long postId) {
+        Long currentMemberId = AuthUtil.getCurrentMemberId();
+        String currentRole = AuthUtil.getCurrentMemberRole();
+        PostDetailDto postDetail = postService.getPostDetailById(postId, currentMemberId);
+        Long postOwnerId = postDetail.getPost().getMemberId();
+        if (!postOwnerId.equals(currentMemberId) && !"ADMIN".equals(currentRole)) {
+            return ResponseEntity.status(403).body(new ApiResponse<>(403, "본인 또는 관리자만 삭제 가능합니다.", null));
+        }
         postService.deletePost(postId);
         return ResponseEntity.ok(new ApiResponse<>(200, "게시글이 삭제되었습니다.", null));
     }
@@ -220,7 +242,6 @@ public class PostController {
     @GetMapping("/top/ongoingList")
     public ResponseEntity<ApiResponse<List<PostDto>>> getTopNOngoingPolls(@RequestParam(defaultValue = "3") int size) {
         Long memberId = AuthUtil.getCurrentMemberId();
-        if (memberId == null) throw new IllegalArgumentException("올바른 회원 ID가 아닙니다");
         List<PostDto> posts = postService.getTopNPollsByStatus(PollDto.PollStatus.ONGOING, size, memberId);
         String message = String.format("진행중인 투표 Top %d 조회 성공", size);
         return ResponseEntity.ok(new ApiResponse<>(200, message, posts));
@@ -230,7 +251,6 @@ public class PostController {
     @GetMapping("/top/closedList")
     public ResponseEntity<ApiResponse<List<PostDto>>> getTopNClosedPolls(@RequestParam(defaultValue = "3") int size) {
         Long memberId = AuthUtil.getCurrentMemberId();
-        if (memberId == null) throw new IllegalArgumentException("올바른 회원 ID가 아닙니다");
         List<PostDto> posts = postService.getTopNPollsByStatus(PollDto.PollStatus.CLOSED, size, memberId);
         String message = String.format("종료된 투표 Top %d 조회 성공", size);
         return ResponseEntity.ok(new ApiResponse<>(200, message, posts));
@@ -240,7 +260,6 @@ public class PostController {
     @GetMapping("/top/ongoing")
     public ResponseEntity<ApiResponse<PostDto>> getTopOngoingPoll() {
         Long memberId = AuthUtil.getCurrentMemberId();
-        if (memberId == null) throw new IllegalArgumentException("올바른 회원 ID가 아닙니다");
         PostDto post = postService.getTopPollByStatus(PollDto.PollStatus.ONGOING, memberId);
         return ResponseEntity.ok(new ApiResponse<>(200, "진행중인 투표 Top 1 조회 성공", post));
     }
@@ -249,7 +268,6 @@ public class PostController {
     @GetMapping("/top/closed")
     public ResponseEntity<ApiResponse<PostDto>> getTopClosedPoll() {
         Long memberId = AuthUtil.getCurrentMemberId();
-        if (memberId == null) throw new IllegalArgumentException("올바른 회원 ID가 아닙니다");
         PostDto post = postService.getTopPollByStatus(PollDto.PollStatus.CLOSED, memberId);
         return ResponseEntity.ok(new ApiResponse<>(200, "마감된 투표 Top 1 조회 성공", post));
     }

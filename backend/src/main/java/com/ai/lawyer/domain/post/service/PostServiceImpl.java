@@ -32,8 +32,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.ai.lawyer.global.util.AuthUtil;
-
 @Service
 public class PostServiceImpl implements PostService {
 
@@ -77,13 +75,13 @@ public class PostServiceImpl implements PostService {
         return convertToDto(saved, memberId);
     }
 
-    public PostDetailDto getPostDetailById(Long postId) {
+    public PostDetailDto getPostDetailById(Long postId, Long memberId) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
-        PostDto postDto = convertToDto(post, post.getMember().getMemberId());
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
+        PostDto postDto = convertToDto(post, memberId);
         return PostDetailDto.builder()
-                .post(postDto)
-                .build();
+            .post(postDto)
+            .build();
     }
 
     @Override
@@ -239,28 +237,28 @@ public class PostServiceImpl implements PostService {
         }
         savedPost.setPoll(savedPoll);
         postRepository.save(savedPost);
-        return getPostDetailById(savedPost.getPostId());
+        return getPostDetailById(savedPost.getPostId(), memberId);
     }
 
     @Override
     public List<PostSimpleDto> getAllSimplePosts() {
         List<Post> posts = postRepository.findAll();
         return posts.stream()
-            .map(post -> {
-                PostSimpleDto.PollInfo pollInfo = null;
-                if (post.getPoll() != null) {
-                    pollInfo = PostSimpleDto.PollInfo.builder()
-                        .pollId(post.getPoll().getPollId())
-                        .pollStatus(post.getPoll().getStatus().name())
-                        .build();
-                }
-                return PostSimpleDto.builder()
-                    .postId(post.getPostId())
-                    .memberId(post.getMember().getMemberId())
-                    .poll(pollInfo)
-                    .build();
-            })
-            .collect(Collectors.toList());
+                .map(post -> {
+                    PostSimpleDto.PollInfo pollInfo = null;
+                    if (post.getPoll() != null) {
+                        pollInfo = PostSimpleDto.PollInfo.builder()
+                                .pollId(post.getPoll().getPollId())
+                                .pollStatus(post.getPoll().getStatus().name())
+                                .build();
+                    }
+                    return PostSimpleDto.builder()
+                            .postId(post.getPostId())
+                            .memberId(post.getMember().getMemberId())
+                            .poll(pollInfo)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     @Override

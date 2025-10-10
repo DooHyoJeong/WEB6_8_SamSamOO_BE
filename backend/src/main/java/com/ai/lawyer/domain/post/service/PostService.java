@@ -16,7 +16,7 @@ import java.util.List;
 public interface PostService {
     // ===== 조회 관련 =====
     PostDetailDto getPostById(Long postId);
-    PostDetailDto getPostDetailById(Long postId);
+    PostDetailDto getPostDetailById(Long postId, Long memberId);
     List<PostDetailDto> getAllPosts(Long memberId);
     List<PostSimpleDto> getAllSimplePosts();
     List<PostDto> getPostsByMemberId(Long memberId);

@@ -122,6 +122,8 @@ class PollControllerTest {
     @Test
     @DisplayName("투표 삭제")
     void t6() throws Exception {
+        PollDto pollDto = PollDto.builder().pollId(1L).postId(1L).build();
+        Mockito.when(pollService.getPoll(Mockito.eq(1L), Mockito.anyLong())).thenReturn(pollDto);
         Mockito.doNothing().when(pollService).deletePoll(Mockito.anyLong());
 
         mockMvc.perform(
