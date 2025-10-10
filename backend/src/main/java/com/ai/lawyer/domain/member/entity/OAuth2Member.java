@@ -1,8 +1,5 @@
 package com.ai.lawyer.domain.member.entity;
 
-import com.ai.lawyer.domain.post.entity.Post;
-import com.ai.lawyer.domain.poll.entity.PollVote;
-import com.ai.lawyer.domain.chatbot.entity.History;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -10,8 +7,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "oauth2_member",
@@ -78,19 +73,6 @@ public class OAuth2Member implements MemberAdapter {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    // 연관 관계: 회원 탈퇴 시 cascade 삭제
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<Post> posts = new ArrayList<>();
-
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<PollVote> pollVotes = new ArrayList<>();
-
-    @OneToMany(mappedBy = "memberId", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<History> histories = new ArrayList<>();
 
     @Getter
     public enum Provider {
