@@ -317,6 +317,7 @@ mkdir -p /home/ec2-user/app/init/sql/dev
 aws s3 cp s3://${var.prefix}-s3-bucket-1/init.sql /home/ec2-user/app/init/sql/init.sql
 aws s3 cp s3://${var.prefix}-s3-bucket-1/lawData-dev.sql /home/ec2-user/app/init/sql/dev/lawData-dev.sql
 aws s3 cp s3://${var.prefix}-s3-bucket-1/precedentData-dev.sql /home/ec2-user/app/init/sql/dev/precedentData-dev.sql
+aws s3 cp s3://${var.prefix}-s3-bucket-1/legal_cases.snapshot /home/ec2-user/app/init/qdrant/snapshot/legal_cases.snapshot
 
 # MySQL 설정 폴더 생성 및 UTF8 설정
 mkdir -p /dockerProjects/mysql/volumes/etc/mysql/conf.d
@@ -325,6 +326,7 @@ cat <<EOF > /dockerProjects/mysql/volumes/etc/mysql/conf.d/charset.cnf
 [mysqld]
 character-set-server = utf8mb4
 collation-server = utf8mb4_general_ci
+lower_case_table_names=1
 
 [client]
 default-character-set = utf8mb4
@@ -370,12 +372,17 @@ docker exec -i mysql mysql -uroot -p${var.password_1} ${var.app_1_db_name} < /ho
 docker exec -i mysql mysql -uroot -p${var.password_1} ${var.app_1_db_name} < /home/ec2-user/app/init/sql/dev/precedentData-dev.sql
 
 # Qdrant 설치
+mkdir -p /qdrant/snapshots/legal_cases
+aws s3 cp s3://${var.prefix}-s3-bucket-1/legal_cases.snapshot /qdrant/snapshots/legal_cases/legal_cases.snapshot
+
 docker run -d \
   --name qdrant \
   --restart unless-stopped \
   --network common \
   -p 6333:6333 \
   -p 6334:6334 \
+  -v /qdrant/storage:/qdrant/storage \
+  -v /qdrant/snapshots:/qdrant/snapshots \
   qdrant/qdrant
 
 # Qdrant healthcheck 대기
@@ -440,7 +447,7 @@ resource "aws_instance" "ec2_1" {
   # 사용할 AMI ID
   ami = data.aws_ami.latest_amazon_linux.id
   # EC2 인스턴스 유형
-  instance_type = "t3.micro"
+  instance_type = "t3.small"
   # 사용할 서브넷 ID
   subnet_id = aws_subnet.subnet_2.id
   # 적용할 보안 그룹 ID
