@@ -53,6 +53,15 @@ class MemberServiceTest {
     private EmailAuthService emailAuthService;
 
     @Mock
+    private com.ai.lawyer.domain.post.repository.PostRepository postRepository;
+
+    @Mock
+    private com.ai.lawyer.domain.poll.repository.PollVoteRepository pollVoteRepository;
+
+    @Mock
+    private com.ai.lawyer.domain.chatbot.repository.HistoryRepository historyRepository;
+
+    @Mock
     private HttpServletResponse response;
 
     private MemberService memberService;
@@ -73,7 +82,10 @@ class MemberServiceTest {
                 tokenProvider,
                 cookieUtil,
                 emailService,
-                emailAuthService
+                emailAuthService,
+                postRepository,
+                pollVoteRepository,
+                historyRepository
         );
         memberService.setOauth2MemberRepository(oauth2MemberRepository);
 
@@ -300,7 +312,18 @@ class MemberServiceTest {
         memberService.deleteMember(loginId);
 
         // then
+        // 1. 회원 조회
         verify(memberRepository).findByLoginId(loginId);
+
+        // 2. 연관 데이터 명시적 삭제 (순서 중요)
+        verify(historyRepository).deleteByMemberIdValue(member.getMemberId());
+        verify(pollVoteRepository).deleteByMemberIdValue(member.getMemberId());
+        verify(postRepository).deleteByMemberIdValue(member.getMemberId());
+
+        // 3. Redis 토큰 삭제
+        verify(tokenProvider).deleteAllTokens(loginId);
+
+        // 4. 회원 삭제
         verify(memberRepository).delete(member);
     }
 

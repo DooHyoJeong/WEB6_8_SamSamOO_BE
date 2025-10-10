@@ -58,6 +58,15 @@ class MemberServiceOAuth2Test {
     private EmailAuthService emailAuthService;
 
     @Mock
+    private com.ai.lawyer.domain.post.repository.PostRepository postRepository;
+
+    @Mock
+    private com.ai.lawyer.domain.poll.repository.PollVoteRepository pollVoteRepository;
+
+    @Mock
+    private com.ai.lawyer.domain.chatbot.repository.HistoryRepository historyRepository;
+
+    @Mock
     private HttpServletResponse response;
 
     private MemberService memberService;
@@ -74,7 +83,10 @@ class MemberServiceOAuth2Test {
                 tokenProvider,
                 cookieUtil,
                 emailService,
-                emailAuthService
+                emailAuthService,
+                postRepository,
+                pollVoteRepository,
+                historyRepository
         );
         memberService.setOauth2MemberRepository(oauth2MemberRepository);
 

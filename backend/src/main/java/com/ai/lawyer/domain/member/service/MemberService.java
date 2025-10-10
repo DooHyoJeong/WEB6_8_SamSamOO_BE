@@ -5,6 +5,9 @@ import com.ai.lawyer.domain.member.entity.Member;
 import com.ai.lawyer.domain.member.entity.OAuth2Member;
 import com.ai.lawyer.domain.member.repositories.MemberRepository;
 import com.ai.lawyer.domain.member.repositories.OAuth2MemberRepository;
+import com.ai.lawyer.domain.post.repository.PostRepository;
+import com.ai.lawyer.domain.poll.repository.PollVoteRepository;
+import com.ai.lawyer.domain.chatbot.repository.HistoryRepository;
 import com.ai.lawyer.global.jwt.TokenProvider;
 import com.ai.lawyer.global.jwt.CookieUtil;
 import com.ai.lawyer.global.email.service.EmailService;
@@ -27,6 +30,9 @@ public class MemberService {
     private final CookieUtil cookieUtil;
     private final EmailService emailService;
     private final EmailAuthService emailAuthService;
+    private final PostRepository postRepository;
+    private final PollVoteRepository pollVoteRepository;
+    private final HistoryRepository historyRepository;
 
     public MemberService(
             MemberRepository memberRepository,
@@ -34,13 +40,19 @@ public class MemberService {
             TokenProvider tokenProvider,
             CookieUtil cookieUtil,
             EmailService emailService,
-            EmailAuthService emailAuthService) {
+            EmailAuthService emailAuthService,
+            PostRepository postRepository,
+            PollVoteRepository pollVoteRepository,
+            HistoryRepository historyRepository) {
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
         this.cookieUtil = cookieUtil;
         this.emailService = emailService;
         this.emailAuthService = emailAuthService;
+        this.postRepository = postRepository;
+        this.pollVoteRepository = pollVoteRepository;
+        this.historyRepository = historyRepository;
     }
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -186,24 +198,81 @@ public class MemberService {
 
     @Transactional
     public void deleteMember(String loginId) {
-        // Member 또는 OAuth2Member 삭제
+        log.info("회원 탈퇴 시작: loginId={}", loginId);
+
+        // 1. Member 또는 OAuth2Member 조회하여 memberId 가져오기
+        Long memberId = null;
+        boolean isRegularMember = false;
+
         java.util.Optional<Member> regularMember = memberRepository.findByLoginId(loginId);
         if (regularMember.isPresent()) {
-            memberRepository.delete(regularMember.get());
-            log.info("일반 회원 삭제 완료: loginId={}", loginId);
-            return;
-        }
-
-        if (oauth2MemberRepository != null) {
+            memberId = regularMember.get().getMemberId();
+            isRegularMember = true;
+            log.info("일반 회원 찾음: loginId={}, memberId={}", loginId, memberId);
+        } else if (oauth2MemberRepository != null) {
             java.util.Optional<OAuth2Member> oauth2Member = oauth2MemberRepository.findByLoginId(loginId);
             if (oauth2Member.isPresent()) {
-                oauth2MemberRepository.delete(oauth2Member.get());
-                log.info("OAuth2 회원 삭제 완료: loginId={}", loginId);
-                return;
+                memberId = oauth2Member.get().getMemberId();
+                log.info("OAuth2 회원 찾음: loginId={}, memberId={}", loginId, memberId);
             }
         }
 
-        log.warn("삭제할 회원을 찾을 수 없습니다: loginId={}", loginId);
+        if (memberId == null) {
+            log.warn("삭제할 회원을 찾을 수 없습니다: loginId={}", loginId);
+            return;
+        }
+
+        // 2. 연관된 데이터 명시적 삭제 (순서 중요: FK 제약조건 고려)
+        log.info("연관 데이터 삭제 시작: memberId={}", memberId);
+
+        // 2-1. 채팅 히스토리 삭제 (Chat 엔티티도 cascade로 함께 삭제됨)
+        try {
+            historyRepository.deleteByMemberIdValue(memberId);
+            log.info("채팅 히스토리 삭제 완료: memberId={}", memberId);
+        } catch (Exception e) {
+            log.error("채팅 히스토리 삭제 실패: memberId={}, error={}", memberId, e.getMessage());
+        }
+
+        // 2-2. 투표 내역 삭제
+        try {
+            pollVoteRepository.deleteByMemberIdValue(memberId);
+            log.info("투표 내역 삭제 완료: memberId={}", memberId);
+        } catch (Exception e) {
+            log.error("투표 내역 삭제 실패: memberId={}, error={}", memberId, e.getMessage());
+        }
+
+        // 2-3. 게시글 삭제 (Poll 엔티티도 cascade로 함께 삭제됨)
+        try {
+            postRepository.deleteByMemberIdValue(memberId);
+            log.info("게시글 삭제 완료: memberId={}", memberId);
+        } catch (Exception e) {
+            log.error("게시글 삭제 실패: memberId={}, error={}", memberId, e.getMessage());
+        }
+
+        // 3. Redis 토큰 삭제
+        try {
+            tokenProvider.deleteAllTokens(loginId);
+            log.info("Redis 토큰 삭제 완료: loginId={}", loginId);
+        } catch (Exception e) {
+            log.error("Redis 토큰 삭제 실패: loginId={}, error={}", loginId, e.getMessage());
+        }
+
+        // 4. 회원 정보 삭제
+        final Long finalMemberId = memberId;
+        if (isRegularMember) {
+            regularMember.ifPresent(member -> {
+                memberRepository.delete(member);
+                log.info("일반 회원 삭제 완료: loginId={}, memberId={}", loginId, finalMemberId);
+            });
+        } else if (oauth2MemberRepository != null) {
+            java.util.Optional<OAuth2Member> oauth2Member = oauth2MemberRepository.findByLoginId(loginId);
+            oauth2Member.ifPresent(member -> {
+                oauth2MemberRepository.delete(member);
+                log.info("OAuth2 회원 삭제 완료: loginId={}, memberId={}", loginId, finalMemberId);
+            });
+        }
+
+        log.info("회원 탈퇴 완료: loginId={}, memberId={}", loginId, finalMemberId);
     }
 
     public void sendCodeToEmailByLoginId(String loginId) {
