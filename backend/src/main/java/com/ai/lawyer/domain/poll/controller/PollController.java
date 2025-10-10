@@ -40,13 +40,6 @@ public class PollController {
         return ResponseEntity.ok(new ApiResponse<>(200, "투표 단일 조회 성공", poll));
     }
 
-    @Operation(summary = "투표 옵션 목록 조회")
-    @GetMapping("/{pollId}/options")
-    public ResponseEntity<ApiResponse<List<PollOptions>>> getPollOptions(@PathVariable Long pollId) {
-        List<PollOptions> options = pollService.getPollOptions(pollId);
-        return ResponseEntity.ok(new ApiResponse<>(200, "투표 옵션 목록 조회 성공", options));
-    }
-
     @Operation(summary = "투표하기")
     @PostMapping("/{pollId}/vote")
     public ResponseEntity<ApiResponse<PollVoteDto>> vote(@PathVariable Long pollId, @RequestParam Long pollItemsId) {
