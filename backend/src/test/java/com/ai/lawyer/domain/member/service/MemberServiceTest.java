@@ -300,8 +300,9 @@ class MemberServiceTest {
         memberService.deleteMember(loginId);
 
         // then
+        verify(tokenProvider).deleteAllTokens(loginId); // Redis 토큰 삭제
         verify(memberRepository).findByLoginId(loginId);
-        verify(memberRepository).delete(member);
+        verify(memberRepository).delete(member); // 회원 삭제 (cascade로 연관 데이터 자동 삭제)
     }
 
     @Test

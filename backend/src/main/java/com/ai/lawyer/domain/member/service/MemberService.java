@@ -186,11 +186,21 @@ public class MemberService {
 
     @Transactional
     public void deleteMember(String loginId) {
-        // Member 또는 OAuth2Member 삭제
+        log.info("회원 탈퇴 시작: loginId={}", loginId);
+
+        // 1. Redis 토큰 삭제
+        try {
+            tokenProvider.deleteAllTokens(loginId);
+            log.info("Redis 토큰 삭제 완료: loginId={}", loginId);
+        } catch (Exception e) {
+            log.error("Redis 토큰 삭제 실패: loginId={}, error={}", loginId, e.getMessage());
+        }
+
+        // 2. Member 또는 OAuth2Member 삭제 (cascade로 연관 데이터 자동 삭제)
         java.util.Optional<Member> regularMember = memberRepository.findByLoginId(loginId);
         if (regularMember.isPresent()) {
             memberRepository.delete(regularMember.get());
-            log.info("일반 회원 삭제 완료: loginId={}", loginId);
+            log.info("일반 회원 삭제 완료 (연관 데이터 cascade 삭제): loginId={}", loginId);
             return;
         }
 
@@ -198,7 +208,7 @@ public class MemberService {
             java.util.Optional<OAuth2Member> oauth2Member = oauth2MemberRepository.findByLoginId(loginId);
             if (oauth2Member.isPresent()) {
                 oauth2MemberRepository.delete(oauth2Member.get());
-                log.info("OAuth2 회원 삭제 완료: loginId={}", loginId);
+                log.info("OAuth2 회원 삭제 완료 (연관 데이터 cascade 삭제): loginId={}", loginId);
                 return;
             }
         }
