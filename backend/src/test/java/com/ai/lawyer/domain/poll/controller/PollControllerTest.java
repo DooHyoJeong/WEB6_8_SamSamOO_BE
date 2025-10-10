@@ -69,7 +69,7 @@ class PollControllerTest {
     @Test
     @DisplayName("투표 단일 조회")
     void t1() throws Exception {
-        Mockito.when(pollService.getPoll(Mockito.anyLong())).thenReturn(null);
+        Mockito.when(pollService.getPoll(Mockito.anyLong(), Mockito.anyLong())).thenReturn(null);
 
         mockMvc.perform(get("/api/polls/1")
                 .cookie(new Cookie("accessToken", "valid-access-token")))
@@ -133,7 +133,7 @@ class PollControllerTest {
     @Test
     @DisplayName("진행중인 투표 Top 1 조회")
     void t7() throws Exception {
-        Mockito.when(pollService.getTopPollByStatus(Mockito.any())).thenReturn(null);
+        Mockito.when(pollService.getTopPollByStatus(Mockito.any(), Mockito.anyLong())).thenReturn(null);
 
         mockMvc.perform(get("/api/polls/top/ongoing")
                 .cookie(new Cookie("accessToken", "valid-access-token")))
@@ -143,7 +143,7 @@ class PollControllerTest {
     @Test
     @DisplayName("종료된 투표 Top 1 조회")
     void t8() throws Exception {
-        Mockito.when(pollService.getTopPollByStatus(Mockito.any())).thenReturn(null);
+        Mockito.when(pollService.getTopPollByStatus(Mockito.any(), Mockito.anyLong())).thenReturn(null);
 
         mockMvc.perform(get("/api/polls/top/closed")
                 .cookie(new Cookie("accessToken", "valid-access-token")))
@@ -167,7 +167,7 @@ class PollControllerTest {
     @DisplayName("투표 단일 조회")
     void t10() throws Exception {
         PollDto responseDto = PollDto.builder().pollId(1L).voteTitle("테스트 투표").build();
-        Mockito.when(pollService.getPoll(Mockito.anyLong())).thenReturn(responseDto);
+        Mockito.when(pollService.getPoll(Mockito.anyLong(), Mockito.anyLong())).thenReturn(responseDto);
 
         mockMvc.perform(get("/api/polls/1")
                 .cookie(new Cookie("accessToken", "valid-access-token")))

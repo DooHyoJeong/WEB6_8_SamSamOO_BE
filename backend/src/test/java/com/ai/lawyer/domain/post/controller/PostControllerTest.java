@@ -105,7 +105,7 @@ class PostControllerTest {
     void t3() throws Exception {
         com.ai.lawyer.domain.post.dto.PostDto postDto = com.ai.lawyer.domain.post.dto.PostDto.builder().postId(1L).postName("테스트 제목").build();
         com.ai.lawyer.domain.post.dto.PostDetailDto postDetailDto = com.ai.lawyer.domain.post.dto.PostDetailDto.builder().post(postDto).build();
-        Mockito.when(postService.getPostById(Mockito.anyLong())).thenReturn(postDetailDto);
+        Mockito.when(postService.getPostDetailById(Mockito.anyLong())).thenReturn(postDetailDto);
 
         mockMvc.perform(get("/api/posts/1")
                         .cookie(new Cookie("accessToken", "valid-access-token")))
@@ -162,7 +162,7 @@ class PostControllerTest {
         );
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
         org.springframework.data.domain.PageImpl<com.ai.lawyer.domain.post.dto.PostDto> page = new org.springframework.data.domain.PageImpl<>(postList, pageable, 1);
-        Mockito.when(postService.getPostsPaged(Mockito.any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
+        Mockito.when(postService.getPostsPaged(Mockito.any(org.springframework.data.domain.Pageable.class), Mockito.anyLong())).thenReturn(page);
 
         mockMvc.perform(get("/api/posts/paged")
                 .param("page", "0")

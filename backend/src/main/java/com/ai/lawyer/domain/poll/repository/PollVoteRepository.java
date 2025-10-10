@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface PollVoteRepository extends JpaRepository<PollVote, Long>, PollVoteRepositoryCustom {
     Optional<PollVote> findByMember_MemberIdAndPoll_PollId(Long memberId, Long pollId);
     void deleteByMember_MemberIdAndPoll_PollId(Long memberId, Long pollId);
+    Optional<PollVote> findByMember_MemberIdAndPollOptions_PollItemsId(Long memberId, Long pollItemsId);
 }

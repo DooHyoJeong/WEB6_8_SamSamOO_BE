@@ -7,6 +7,7 @@ import com.ai.lawyer.domain.poll.dto.PollDto;
 import com.ai.lawyer.domain.member.repositories.MemberRepository;
 import com.ai.lawyer.global.jwt.TokenProvider;
 import com.ai.lawyer.global.response.ApiResponse;
+import com.ai.lawyer.global.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +59,8 @@ public class PostController {
     @Operation(summary = "게시글 전체 조회")
     @GetMapping("")
     public ResponseEntity<ApiResponse<List<PostDetailDto>>> getAllPosts() {
-        List<PostDetailDto> posts = postService.getAllPosts();
+        Long memberId = AuthUtil.getCurrentMemberId();
+        List<PostDetailDto> posts = postService.getAllPosts(memberId);
         return ResponseEntity.ok(new ApiResponse<>(200, "게시글 전체 조회 성공", posts));
     }
 
@@ -72,7 +74,7 @@ public class PostController {
     @Operation(summary = "게시글 단일 조회")
     @GetMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostDetailDto>> getPostById(@PathVariable Long postId) {
-        PostDetailDto postDto = postService.getPostById(postId);
+        PostDetailDto postDto = postService.getPostDetailById(postId);
         return ResponseEntity.ok(new ApiResponse<>(200, "게시글 단일 조회 성공", postDto));
     }
 
@@ -173,7 +175,8 @@ public class PostController {
         @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<PostDto> posts = postService.getPostsPaged(pageable);
+        Long memberId = AuthUtil.getCurrentMemberId();
+        Page<PostDto> posts = postService.getPostsPaged(pageable, memberId);
         if (posts == null) {
             posts = new org.springframework.data.domain.PageImpl<>(java.util.Collections.emptyList(), pageable, 0);
         }
@@ -188,7 +191,8 @@ public class PostController {
         @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<PostDto> posts = postService.getOngoingPostsPaged(pageable);
+        Long memberId = AuthUtil.getCurrentMemberId();
+        Page<PostDto> posts = postService.getOngoingPostsPaged(pageable, memberId);
         if (posts == null) {
             posts = new org.springframework.data.domain.PageImpl<>(java.util.Collections.emptyList(), pageable, 0);
         }
@@ -203,7 +207,8 @@ public class PostController {
         @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<PostDto> posts = postService.getClosedPostsPaged(pageable);
+        Long memberId = AuthUtil.getCurrentMemberId();
+        Page<PostDto> posts = postService.getClosedPostsPaged(pageable, memberId);
         if (posts == null) {
             posts = new org.springframework.data.domain.PageImpl<>(java.util.Collections.emptyList(), pageable, 0);
         }
@@ -214,7 +219,9 @@ public class PostController {
     @Operation(summary = "진행중인 투표 Top N 조회")
     @GetMapping("/top/ongoingList")
     public ResponseEntity<ApiResponse<List<PostDto>>> getTopNOngoingPolls(@RequestParam(defaultValue = "3") int size) {
-        List<PostDto> posts = postService.getTopNPollsByStatus(PollDto.PollStatus.ONGOING, size);
+        Long memberId = AuthUtil.getCurrentMemberId();
+        if (memberId == null) throw new IllegalArgumentException("올바른 회원 ID가 아닙니다");
+        List<PostDto> posts = postService.getTopNPollsByStatus(PollDto.PollStatus.ONGOING, size, memberId);
         String message = String.format("진행중인 투표 Top %d 조회 성공", size);
         return ResponseEntity.ok(new ApiResponse<>(200, message, posts));
     }
@@ -222,7 +229,9 @@ public class PostController {
     @Operation(summary = "마감된 투표 Top N 조회")
     @GetMapping("/top/closedList")
     public ResponseEntity<ApiResponse<List<PostDto>>> getTopNClosedPolls(@RequestParam(defaultValue = "3") int size) {
-        List<PostDto> posts = postService.getTopNPollsByStatus(PollDto.PollStatus.CLOSED, size);
+        Long memberId = AuthUtil.getCurrentMemberId();
+        if (memberId == null) throw new IllegalArgumentException("올바른 회원 ID가 아닙니다");
+        List<PostDto> posts = postService.getTopNPollsByStatus(PollDto.PollStatus.CLOSED, size, memberId);
         String message = String.format("종료된 투표 Top %d 조회 성공", size);
         return ResponseEntity.ok(new ApiResponse<>(200, message, posts));
     }
@@ -230,14 +239,18 @@ public class PostController {
     @Operation(summary = "진행중인 투표 Top 1 조회")
     @GetMapping("/top/ongoing")
     public ResponseEntity<ApiResponse<PostDto>> getTopOngoingPoll() {
-        PostDto post = postService.getTopPollByStatus(PollDto.PollStatus.ONGOING);
+        Long memberId = AuthUtil.getCurrentMemberId();
+        if (memberId == null) throw new IllegalArgumentException("올바른 회원 ID가 아닙니다");
+        PostDto post = postService.getTopPollByStatus(PollDto.PollStatus.ONGOING, memberId);
         return ResponseEntity.ok(new ApiResponse<>(200, "진행중인 투표 Top 1 조회 성공", post));
     }
 
     @Operation(summary = "마감된 투표 Top 1 조회")
     @GetMapping("/top/closed")
     public ResponseEntity<ApiResponse<PostDto>> getTopClosedPoll() {
-        PostDto post = postService.getTopPollByStatus(PollDto.PollStatus.CLOSED);
+        Long memberId = AuthUtil.getCurrentMemberId();
+        if (memberId == null) throw new IllegalArgumentException("올바른 회원 ID가 아닙니다");
+        PostDto post = postService.getTopPollByStatus(PollDto.PollStatus.CLOSED, memberId);
         return ResponseEntity.ok(new ApiResponse<>(200, "마감된 투표 Top 1 조회 성공", post));
     }
 }
