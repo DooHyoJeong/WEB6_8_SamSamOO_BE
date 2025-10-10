@@ -107,8 +107,8 @@ class PollServiceTest {
     void t10() {
         PollDto expected = new PollDto();
         PollUpdateDto updateDto = new PollUpdateDto();
-        Mockito.when(pollService.updatePoll(Mockito.anyLong(), Mockito.any())).thenReturn(expected);
-        PollDto result = pollService.updatePoll(1L, updateDto);
+        Mockito.when(pollService.updatePoll(Mockito.anyLong(), Mockito.any(), Mockito.anyLong())).thenReturn(expected);
+        PollDto result = pollService.updatePoll(1L, updateDto, 1L);
         assertThat(result).isEqualTo(expected);
     }
 

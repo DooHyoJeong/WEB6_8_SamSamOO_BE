@@ -125,7 +125,7 @@ public class PostServiceImpl implements PostService {
             if (post.getPoll() == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "이 게시글에는 투표가 없어 투표 수정이 불가능합니다.");
             }
-            pollService.updatePoll(post.getPoll().getPollId(), postUpdateDto.getPoll());
+            pollService.updatePoll(post.getPoll().getPollId(), postUpdateDto.getPoll(), post.getMember().getMemberId());
         }
 
         if (postUpdateDto.getPostName() != null) post.setPostName(postUpdateDto.getPostName());

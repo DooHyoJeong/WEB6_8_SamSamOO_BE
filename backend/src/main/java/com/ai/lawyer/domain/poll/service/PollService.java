@@ -31,7 +31,7 @@ public interface PollService {
 
     // ===== 생성/수정/삭제 관련 =====
     PollDto createPoll(PollCreateDto request, Long memberId);
-    PollDto updatePoll(Long pollId, PollUpdateDto pollUpdateDto);
+    PollDto updatePoll(Long pollId, PollUpdateDto pollUpdateDto, Long memberId);
     void patchUpdatePoll(Long pollId, PollUpdateDto pollUpdateDto);
     void closePoll(Long pollId);
     void deletePoll(Long pollId);

@@ -67,11 +67,7 @@ public class PollController {
     @PutMapping("/{pollId}")
     public ResponseEntity<ApiResponse<PollDto>> updatePoll(@PathVariable Long pollId, @RequestBody PollUpdateDto pollUpdateDto) {
         Long currentMemberId = AuthUtil.getCurrentMemberId();
-        PollDto poll = pollService.getPoll(pollId, currentMemberId);
-        if (!poll.getPostId().equals(currentMemberId)) {
-            return ResponseEntity.status(403).body(new ApiResponse<>(403, "본인만 투표를 수정할 수 있습니다.", null));
-        }
-        PollDto updated = pollService.updatePoll(pollId, pollUpdateDto);
+        PollDto updated = pollService.updatePoll(pollId, pollUpdateDto, currentMemberId);
         return ResponseEntity.ok(new ApiResponse<>(200, "투표가 수정되었습니다.", updated));
     }
 
