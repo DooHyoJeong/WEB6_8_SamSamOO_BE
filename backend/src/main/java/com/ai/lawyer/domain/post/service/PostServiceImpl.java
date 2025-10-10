@@ -266,20 +266,26 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public Page<PostDto> getOngoingPostsPaged(Pageable pageable, Long memberId) {
-        Page<PostDto> allPosts = postRepository.findAll(pageable).map(post -> convertToDto(post, memberId));
-        List<PostDto> ongoing = allPosts.stream()
-            .filter(dto -> dto.getPoll() != null && dto.getPoll().getStatus() == PollDto.PollStatus.ONGOING)
-            .collect(Collectors.toList());
-        return new PageImpl<>(ongoing, pageable, ongoing.size());
+        List<Post> posts = postRepository.findAll().stream()
+            .filter(p -> p.getPoll() != null && p.getPoll().getStatus() == com.ai.lawyer.domain.poll.entity.Poll.PollStatus.ONGOING)
+            .toList();
+        List<PostDto> postDtos = posts.stream().map(p -> convertToDto(p, memberId)).toList();
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), postDtos.size());
+        List<PostDto> paged = start < end ? postDtos.subList(start, end) : List.of();
+        return new PageImpl<>(paged, pageable, postDtos.size());
     }
 
     @Override
     public Page<PostDto> getClosedPostsPaged(Pageable pageable, Long memberId) {
-        Page<PostDto> allPosts = postRepository.findAll(pageable).map(post -> convertToDto(post, memberId));
-        List<PostDto> closed = allPosts.stream()
-            .filter(dto -> dto.getPoll() != null && dto.getPoll().getStatus() == PollDto.PollStatus.CLOSED)
-            .collect(Collectors.toList());
-        return new PageImpl<>(closed, pageable, closed.size());
+        List<Post> posts = postRepository.findAll().stream()
+            .filter(p -> p.getPoll() != null && p.getPoll().getStatus() == com.ai.lawyer.domain.poll.entity.Poll.PollStatus.CLOSED)
+            .toList();
+        List<PostDto> postDtos = posts.stream().map(p -> convertToDto(p, memberId)).toList();
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), postDtos.size());
+        List<PostDto> paged = start < end ? postDtos.subList(start, end) : List.of();
+        return new PageImpl<>(paged, pageable, postDtos.size());
     }
 
     @Override
@@ -336,7 +342,7 @@ public class PostServiceImpl implements PostService {
         int start = (int) pageable.getOffset();
         int end = Math.min((start + pageable.getPageSize()), postDtos.size());
         List<PostDto> paged = start < end ? postDtos.subList(start, end) : List.of();
-        return new org.springframework.data.domain.PageImpl<>(paged, pageable, postDtos.size());
+        return new PageImpl<>(paged, pageable, postDtos.size());
     }
 
     @Override
