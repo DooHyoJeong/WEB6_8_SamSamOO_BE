@@ -8,6 +8,9 @@ import com.ai.lawyer.domain.member.repositories.OAuth2MemberRepository;
 import com.ai.lawyer.domain.post.repository.PostRepository;
 import com.ai.lawyer.domain.poll.repository.PollVoteRepository;
 import com.ai.lawyer.domain.chatbot.repository.HistoryRepository;
+import com.ai.lawyer.domain.chatbot.repository.ChatRepository;
+import com.ai.lawyer.domain.chatbot.repository.ChatPrecedentRepository;
+import com.ai.lawyer.domain.chatbot.repository.ChatLawRepository;
 import com.ai.lawyer.global.jwt.TokenProvider;
 import com.ai.lawyer.global.jwt.CookieUtil;
 import com.ai.lawyer.global.email.service.EmailService;
@@ -33,6 +36,9 @@ public class MemberService {
     private final PostRepository postRepository;
     private final PollVoteRepository pollVoteRepository;
     private final HistoryRepository historyRepository;
+    private final ChatRepository chatRepository;
+    private final ChatPrecedentRepository chatPrecedentRepository;
+    private final ChatLawRepository chatLawRepository;
 
     public MemberService(
             MemberRepository memberRepository,
@@ -43,7 +49,10 @@ public class MemberService {
             EmailAuthService emailAuthService,
             PostRepository postRepository,
             PollVoteRepository pollVoteRepository,
-            HistoryRepository historyRepository) {
+            HistoryRepository historyRepository,
+            ChatRepository chatRepository,
+            ChatPrecedentRepository chatPrecedentRepository,
+            ChatLawRepository chatLawRepository) {
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
@@ -53,6 +62,9 @@ public class MemberService {
         this.postRepository = postRepository;
         this.pollVoteRepository = pollVoteRepository;
         this.historyRepository = historyRepository;
+        this.chatRepository = chatRepository;
+        this.chatPrecedentRepository = chatPrecedentRepository;
+        this.chatLawRepository = chatLawRepository;
     }
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -225,37 +237,32 @@ public class MemberService {
         // 2. 연관된 데이터 명시적 삭제 (순서 중요: FK 제약조건 고려)
         log.info("연관 데이터 삭제 시작: memberId={}", memberId);
 
-        // 2-1. 채팅 히스토리 삭제 (Chat 엔티티도 cascade로 함께 삭제됨)
-        try {
-            historyRepository.deleteByMemberIdValue(memberId);
-            log.info("채팅 히스토리 삭제 완료: memberId={}", memberId);
-        } catch (Exception e) {
-            log.error("채팅 히스토리 삭제 실패: memberId={}, error={}", memberId, e.getMessage());
-        }
+        // 2-1. ChatPrecedent, ChatLaw 삭제 (Chat의 FK 참조)
+        chatPrecedentRepository.deleteByMemberIdValue(memberId);
+        log.info("채팅 판례 삭제 완료: memberId={}", memberId);
 
-        // 2-2. 투표 내역 삭제
-        try {
-            pollVoteRepository.deleteByMemberIdValue(memberId);
-            log.info("투표 내역 삭제 완료: memberId={}", memberId);
-        } catch (Exception e) {
-            log.error("투표 내역 삭제 실패: memberId={}, error={}", memberId, e.getMessage());
-        }
+        chatLawRepository.deleteByMemberIdValue(memberId);
+        log.info("채팅 법령 삭제 완료: memberId={}", memberId);
 
-        // 2-3. 게시글 삭제 (Poll 엔티티도 cascade로 함께 삭제됨)
-        try {
-            postRepository.deleteByMemberIdValue(memberId);
-            log.info("게시글 삭제 완료: memberId={}", memberId);
-        } catch (Exception e) {
-            log.error("게시글 삭제 실패: memberId={}, error={}", memberId, e.getMessage());
-        }
+        // 2-2. Chat 삭제 (History의 FK 참조)
+        chatRepository.deleteByMemberIdValue(memberId);
+        log.info("채팅 삭제 완료: memberId={}", memberId);
+
+        // 2-3. History 삭제 (Member의 FK 참조)
+        historyRepository.deleteByMemberIdValue(memberId);
+        log.info("채팅 히스토리 삭제 완료: memberId={}", memberId);
+
+        // 2-4. 투표 내역 삭제
+        pollVoteRepository.deleteByMemberIdValue(memberId);
+        log.info("투표 내역 삭제 완료: memberId={}", memberId);
+
+        // 2-5. 게시글 삭제 (Poll 엔티티도 cascade로 함께 삭제됨)
+        postRepository.deleteByMemberIdValue(memberId);
+        log.info("게시글 삭제 완료: memberId={}", memberId);
 
         // 3. Redis 토큰 삭제
-        try {
-            tokenProvider.deleteAllTokens(loginId);
-            log.info("Redis 토큰 삭제 완료: loginId={}", loginId);
-        } catch (Exception e) {
-            log.error("Redis 토큰 삭제 실패: loginId={}, error={}", loginId, e.getMessage());
-        }
+        tokenProvider.deleteAllTokens(loginId);
+        log.info("Redis 토큰 삭제 완료: loginId={}", loginId);
 
         // 4. 회원 정보 삭제
         final Long finalMemberId = memberId;
