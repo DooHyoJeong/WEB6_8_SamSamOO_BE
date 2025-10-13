@@ -220,7 +220,7 @@ class PostControllerTest {
         );
         org.springframework.data.domain.PageImpl<com.ai.lawyer.domain.post.dto.PostDto> page = new org.springframework.data.domain.PageImpl<>(posts, pageable, 1);
         Mockito.when(postService.getMyPostspaged(Mockito.any(), Mockito.anyLong())).thenReturn(page);
-        mockMvc.perform(get("/api/posts/my")
+        mockMvc.perform(get("/api/posts/mypaged")
                 .param("page", "0")
                 .param("size", "10")
                 .cookie(new Cookie("accessToken", "valid-access-token")))
