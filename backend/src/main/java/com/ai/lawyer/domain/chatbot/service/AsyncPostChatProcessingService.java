@@ -13,13 +13,14 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.ai.document.Document;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+// 더이상 사용 안함
+// 테스트 용도로 남겨둠
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -38,7 +39,7 @@ public class AsyncPostChatProcessingService {
     @Value("{$custom.ai.keyword-extraction}")
     private String keywordExtraction;
 
-    @Async
+    //@Async
     @Transactional
     public void processHandlerTasks(Long historyId, String userMessage, String fullResponse, List<Document> similarCaseDocuments, List<Document> similarLawDocuments) {
         try {
@@ -74,7 +75,7 @@ public class AsyncPostChatProcessingService {
         String targetText = fullResponse.contains("해당 질문은 법률") ? userMessage : fullResponse;
         TitleExtractionDto titleDto = keywordService.keywordExtract(targetText, titleExtraction, TitleExtractionDto.class);
         history.setTitle(titleDto.getTitle());
-        historyRepository.save(history); // @Transactional 어노테이션으로 인해 메소드 종료 시 자동 저장되지만, 명시적으로 호출할 수도 있습니다.
+        historyRepository.save(history);
     }
 
     private void extractAndUpdateKeywordRanks(String message) {
