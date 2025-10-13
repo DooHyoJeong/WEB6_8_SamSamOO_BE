@@ -1,6 +1,8 @@
 package com.ai.lawyer.domain.post.service;
 
 import com.ai.lawyer.domain.member.entity.Member;
+import com.ai.lawyer.domain.poll.dto.PollDto;
+import com.ai.lawyer.domain.poll.dto.PollDto.PollStatus;
 import com.ai.lawyer.domain.post.dto.PostDto;
 import com.ai.lawyer.domain.post.dto.PostDetailDto;
 import com.ai.lawyer.domain.post.dto.PostRequestDto;
@@ -32,6 +34,8 @@ import java.util.stream.Collectors;
 
 import static com.ai.lawyer.domain.poll.entity.Poll.PollStatus.CLOSED;
 import static com.ai.lawyer.domain.poll.entity.Poll.PollStatus.ONGOING;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @Service
 public class PostServiceImpl implements PostService {
@@ -100,7 +104,7 @@ public class PostServiceImpl implements PostService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 회원의 게시글이 없습니다.");
         }
         return posts.stream()
-                .sorted(Comparator.comparing(Post::getUpdatedAt).reversed()) // 최신순 정렬
+                .sorted(Comparator.comparing(Post::getUpdatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed()) // 최신순 정렬
                 .map(post -> convertToDto(post, memberId))
                 .collect(Collectors.toList());
     }
@@ -145,7 +149,7 @@ public class PostServiceImpl implements PostService {
     @Override
     public List<PostDetailDto> getAllPosts(Long memberId) {
         return postRepository.findAll().stream()
-                .sorted(Comparator.comparing(Post::getUpdatedAt).reversed()) // 최신순 정렬
+                .sorted(Comparator.comparing(Post::getUpdatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed()) // 최신순 정렬
                 .map(post -> PostDetailDto.builder()
                         .post(convertToDto(post, memberId))
                         .build())
@@ -165,7 +169,7 @@ public class PostServiceImpl implements PostService {
         Member member = AuthUtil.getMemberOrThrow(requesterMemberId);
         List<Post> posts = postRepository.findByMember(member);
         return posts.stream()
-                .sorted(Comparator.comparing(Post::getUpdatedAt).reversed()) // 최신순 정렬
+                .sorted(Comparator.comparing(Post::getUpdatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed()) // 최신순 정렬
                 .map(post -> convertToDto(post, requesterMemberId))
                 .collect(Collectors.toList());
     }
@@ -235,7 +239,7 @@ public class PostServiceImpl implements PostService {
     public List<PostSimpleDto> getAllSimplePosts() {
         List<Post> posts = postRepository.findAll();
         return posts.stream()
-                .sorted(Comparator.comparing(Post::getUpdatedAt).reversed()) // 최신순 정렬
+                .sorted(Comparator.comparing(Post::getUpdatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed()) // 최신순 정렬
                 .map(post -> {
                     PostSimpleDto.PollInfo pollInfo = null;
                     if (post.getPoll() != null) {
@@ -257,10 +261,10 @@ public class PostServiceImpl implements PostService {
     public Page<PostDto> getPostsPaged(Pageable pageable, Long memberId) {
         Pageable sortedPageable = pageable;
         if (pageable.getSort().isUnsorted() || pageable.getSort().getOrderFor("updatedAt") == null) {
-            sortedPageable = org.springframework.data.domain.PageRequest.of(
+            sortedPageable = PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
-                org.springframework.data.domain.Sort.by("updatedAt").descending()
+                Sort.by("updatedAt").descending()
             );
         }
         return postRepository.findAll(sortedPageable).map(post -> convertToDto(post, memberId));
@@ -303,7 +307,7 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public PostDto getTopPollByStatus(com.ai.lawyer.domain.poll.dto.PollDto.PollStatus status, Long memberId) {
+    public PostDto getTopPollByStatus(PollStatus status, Long memberId) {
         return postRepository.findAll().stream()
                 .map(post -> convertToDto(post, memberId))
                 .filter(dto -> dto.getPoll() != null && dto.getPoll().getStatus() == status)
@@ -312,7 +316,7 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public List<PostDto> getTopNPollsByStatus(com.ai.lawyer.domain.poll.dto.PollDto.PollStatus status, int n, Long memberId) {
+    public List<PostDto> getTopNPollsByStatus(PollStatus status, int n, Long memberId) {
         return postRepository.findAll().stream()
                 .map(post -> convertToDto(post, memberId))
                 .filter(dto -> dto.getPoll() != null && dto.getPoll().getStatus() == status)
@@ -326,7 +330,7 @@ public class PostServiceImpl implements PostService {
         if (entity.getMember() != null) {
             postMemberId = entity.getMember().getMemberId();
         }
-        com.ai.lawyer.domain.poll.dto.PollDto pollDto = null;
+        PollDto pollDto = null;
         if (entity.getPoll() != null) {
             if (entity.getPoll().getStatus() == Poll.PollStatus.CLOSED) {
                 pollDto = pollService.getPollWithStatistics(entity.getPoll().getPollId(), memberId);
