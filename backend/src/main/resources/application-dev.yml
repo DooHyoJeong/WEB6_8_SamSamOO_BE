@@ -70,3 +70,5 @@ custom:
     failure-url: ${DEV_OAUTH2_FAILURE_REDIRECT_URL}
   frontend:
     url: ${DEV_FRONTEND_URL}
+  cookie:
+    domain: ${DEV_COOKIE_DOMAIN}
