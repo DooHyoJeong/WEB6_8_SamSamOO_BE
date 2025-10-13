@@ -129,24 +129,16 @@ public class PostController {
          return ResponseEntity.ok(new ApiResponse<>(200, "본인 게시글 단일 조회 성공", postDto));
      }
 
-//    @Operation(summary = "본인 게시글 전체 조회")
-//    @GetMapping("/my")
-//    public ResponseEntity<ApiResponse<PostPageDto>> getMyPosts(
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "10") int size
-//    ) {
-//        Pageable pageable = PageRequest.of(page, size, Sort.by("updatedAt").descending());
-//        Long memberId = AuthUtil.getAuthenticatedMemberId();
-//        PostPageDto response = postService.getMyPosts(pageable, memberId);
-//        return ResponseEntity.ok(new ApiResponse<>(200, "본인 게시글 전체 조회 성공", response));
-//    }
-
     @Operation(summary = "본인 게시글 전체 조회")
     @GetMapping("/my")
-    public ResponseEntity<ApiResponse<List<PostDto>>> getMyPosts() {
+    public ResponseEntity<ApiResponse<Page<PostDto>>> getMyPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("updatedAt").descending());
         Long memberId = AuthUtil.getAuthenticatedMemberId();
-        List<PostDto> posts = postService.getMyPosts(memberId);
-        return ResponseEntity.ok(new ApiResponse<>(200, "본인 게시글 전체 조회 성공", posts));
+        Page<PostDto> response = postService.getMyPosts(pageable, memberId);
+        return ResponseEntity.ok(new ApiResponse<>(200, "본인 게시글 전체 조회 성공", response));
     }
 
     @Operation(summary = "게시글+투표 동시 등록")

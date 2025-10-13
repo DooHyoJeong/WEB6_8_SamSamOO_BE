@@ -165,13 +165,11 @@ public class PostServiceImpl implements PostService {
         return convertToDto(post, requesterMemberId);
     }
 
-    public List<PostDto> getMyPosts(Long requesterMemberId) {
+    @Override
+    public Page<PostDto> getMyPosts(Pageable pageable, Long requesterMemberId) {
         Member member = AuthUtil.getMemberOrThrow(requesterMemberId);
-        List<Post> posts = postRepository.findByMember(member);
-        return posts.stream()
-                .sorted(Comparator.comparing(Post::getUpdatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed()) // 최신순 정렬
-                .map(post -> convertToDto(post, requesterMemberId))
-                .collect(Collectors.toList());
+        Page<Post> posts = postRepository.findByMember(member, pageable);
+        return posts.map(post -> convertToDto(post, requesterMemberId));
     }
 
     @Override
