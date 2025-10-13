@@ -450,7 +450,7 @@ public class PollServiceImpl implements PollService {
             Long voteCount = pollVoteRepository.countByPollOptionId(option.getPollItemsId());
             boolean voted = false;
             if (memberId != null) {
-                voted = pollVoteRepository.findByMember_MemberIdAndPollOptions_PollItemsId(memberId, option.getPollItemsId()).isPresent();
+                voted = !pollVoteRepository.findByMember_MemberIdAndPollOptions_PollItemsId(memberId, option.getPollItemsId()).isEmpty();
             }
             List<PollStaticsDto> statics = null;
             if (withStatistics && poll.getStatus() == Poll.PollStatus.CLOSED) {
