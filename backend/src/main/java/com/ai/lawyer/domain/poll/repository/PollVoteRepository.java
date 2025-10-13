@@ -27,6 +27,6 @@ public interface PollVoteRepository extends JpaRepository<PollVote, Long>, PollV
 
     boolean existsByPollAndMember(Poll poll, Member member);
 
-    @Query("SELECT pv.member.memberId FROM PollVote pv WHERE pv.poll = :poll")
+    @Query("SELECT v.member.memberId FROM PollVote v WHERE v.poll = :poll")
     List<Long> findMemberIdsByPoll(@Param("poll") Poll poll);
 }

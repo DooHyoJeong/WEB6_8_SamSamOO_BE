@@ -16,4 +16,3 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     List<Member> findByLoginIdIn(List<String> loginIds);
 }
-
